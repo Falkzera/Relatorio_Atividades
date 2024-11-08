@@ -1,6 +1,7 @@
 #importa as bibliotecas
 import pandas as pd
 import streamlit as st
+from datetime import datetime
 
 
 st.set_page_config(layout='wide', page_title='Relatório de Atividades', page_icon='📊')
@@ -13,6 +14,13 @@ with st.container(): # DATA_BASE
         return atividade, alunos
     df_atividade, df_alunos = data_load()
 
+with st.container(): # CONFIGURAÇÕES de DATA
+
+    # ano atual
+    ano_atual = datetime.now().year
+    ano_passado = ano_atual - 1
+    mes_antes = datetime.now().month - 1
+    mes_atual = datetime.now().month
 
 with st.container(): # LOGOTIPO/IMAGENS/TÍTULOS
 
@@ -37,10 +45,12 @@ with st.container():  # FORMULARIO
     col1, col2 = st.columns(2)
     
     with col1:
-        quantas_atividades = st.number_input('Quantas atividades você vai preencher?', 1, 10, 1)
+        quantas_atividades = st.sidebar.number_input('Quantas atividades você vai preencher?', 1, 10, 1)
     with col2:
-        ano_e_mes = st.date_input('Ano e Mês:', value=pd.to_datetime('today').date(), min_value=pd.to_datetime('today').date() - pd.DateOffset(months=1), max_value=pd.to_datetime('today').date())
-
+        ano = st.sidebar.number_input('Selecione o ano:', ano_passado, ano_atual, value=ano_atual)
+        selecione_mes = st.sidebar.selectbox('Selecione o mês:', range(1, 13), index=mes_antes-1)
+        if ano == ano_atual and selecione_mes > mes_atual:
+            st.sidebar.error('Não é possível selecionar um mês futuro.')
     atividades = []
     horas = []
 
@@ -56,7 +66,8 @@ with st.container():  # FORMULARIO
             horas.append(hora)
 
 with st.container():  # RELATÓRIO
-    relatorio_pronto = pd.DataFrame({'DATA': ano_e_mes, 'ALUNO': aluno,'ATIVIDADE': atividades, 'HORAS': horas})
+    relatorio_pronto = pd.DataFrame({'ANO': ano, 'MES': selecione_mes, 'ALUNO': aluno,'ATIVIDADE': atividades, 'HORAS': horas})
+    relatorio_pronto['HORAS'] = relatorio_pronto['HORAS'].astype(float)
 
 with st.container(): # VALIDAÇÃO
 
@@ -72,21 +83,37 @@ with st.container(): # VALIDAÇÃO
         st.sidebar.error('Horas não preenchidas.')
         st.sidebar.error('Atividade(s) sem horas preenchidas: **{}**'.format(', '.join(relatorio_pronto[relatorio_pronto['HORAS'].eq(0)]['ATIVIDADE'].tolist())))
     
-    elif relatorio_pronto['HORAS'].sum() < 40:
-        st.sidebar.warning('Total de horas menor que 40.')
+    elif relatorio_pronto['HORAS'].sum() < 10:
+        st.sidebar.warning('Total de horas menor que 10.')
 
     else:
         st.write('---')
-        st.sidebar.write(f'**Mês de referência:** {ano_e_mes.strftime("%B de %Y")}')
+        st.sidebar.write(f'**Período de referência:** {selecione_mes}/{ano}')
         st.sidebar.write(f'**Total de horas:** {relatorio_pronto["HORAS"].sum()}h')
         st.sidebar.info(f'Relatório pronto.')
-        st.table(relatorio_pronto)
-    
-        with st.container(): # Envio
 
+        st.data_editor(
+        relatorio_pronto,
+        column_config={
+            "HORAS": st.column_config.ProgressColumn(
+                "Horas",
+                help="Total de horas",
+                format="%f",
+                min_value=0,
+                max_value=relatorio_pronto['HORAS'].max(),
+            ),
+        },
+        hide_index=True,
+    )
+
+        with st.container(): # Envio
             if st.sidebar.button('Enviar'):
-                relatorio_pronto.to_parquet(f'relatorio/{aluno}_{ano_e_mes.strftime("%B")}.parquet', index=False)
-                st.success('Relatório enviado com sucesso!')
+                import os
+                directory = f'relatorio/{aluno}'
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
+                relatorio_pronto.to_parquet(f'{directory}/{aluno}-{selecione_mes}-{ano}.parquet', index=False)
+                st.sidebar.success('Relatório enviado com sucesso!')
 
 
 

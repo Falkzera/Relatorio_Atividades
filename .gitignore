@@ -1,1 +1,3 @@
-/venv/
+/.venv/
+secrets.toml
+client_secret.json

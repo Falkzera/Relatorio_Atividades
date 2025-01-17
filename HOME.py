@@ -1,8 +1,8 @@
-#importa as bibliotecas
 import pandas as pd
 import streamlit as st
 from datetime import datetime
-
+from google_drive_utils import authenticate_service_account, upload_file_to_drive
+import os
 
 st.set_page_config(layout='wide', page_title='Relatório de Atividades', page_icon='📊')
 
@@ -19,7 +19,8 @@ with st.container(): # CONFIGURAÇÕES de DATA
     # ano atual
     ano_atual = datetime.now().year
     ano_passado = ano_atual - 1
-    mes_antes = datetime.now().month - 1
+    mes_antes = datetime.now().month - 1 if datetime.now().month > 1 else 12
+    ano_antes = ano_atual if datetime.now().month > 1 else ano_passado
     mes_atual = datetime.now().month
 
 with st.container(): # LOGOTIPO/IMAGENS/TÍTULOS
@@ -46,7 +47,6 @@ with st.container():  # FORMULARIO
     
     with col1:
         quantas_atividades = st.sidebar.number_input('Quantas atividades você vai preencher?', 1, 10, 1)
-    with col2:
         ano = st.sidebar.number_input('Selecione o ano:', ano_passado, ano_atual, value=ano_atual)
         selecione_mes = st.sidebar.selectbox('Selecione o mês:', range(1, 13), index=mes_antes-1)
         if ano == ano_atual and selecione_mes > mes_atual:
@@ -106,19 +106,34 @@ with st.container(): # VALIDAÇÃO
         hide_index=True,
     )
 
-        with st.container(): # Envio
-            if st.sidebar.button('Enviar'):
-                import os
-                directory = f'relatorio/{aluno}'
-                if not os.path.exists(directory):
-                    os.makedirs(directory)
-                relatorio_pronto.to_parquet(f'{directory}/{aluno}-{selecione_mes}-{ano}.parquet', index=False)
-                st.sidebar.success('Relatório enviado com sucesso!')
+from google_drive_utils import (
+    authenticate_service_account,
+    create_folder_in_drive,
+    upload_file_to_drive,
+    remove_duplicate_files_in_subfolders
+)
+
+# Configurações do Google Drive
+TARGET_FOLDER_ID = "1d0KqEyocTO1lbnWS1u7hooSVJgv5Fz6Q"
+
+if st.sidebar.button('Enviar'):
+    # Autentica no Google Drive usando st.secrets
+    service = authenticate_service_account()
+
+    # Cria ou acessa a pasta do aluno
+    aluno_folder_id = create_folder_in_drive(service, aluno, TARGET_FOLDER_ID)
+
+    # Salva relatório temporariamente
+    local_path = f'{aluno}_{selecione_mes}_{ano}.parquet'
 
 
+    relatorio_pronto.to_parquet(local_path, index=False)
 
+    # Faz upload e substitui arquivos duplicados
+    file_id = upload_file_to_drive(service, local_path, os.path.basename(local_path), aluno_folder_id)
+    os.remove(local_path)
 
-      
+    # Remove duplicados (se necessário, depende da lógica de substituição já implementada)
+    remove_duplicate_files_in_subfolders(service, aluno_folder_id)
 
-
-
+    st.sidebar.success(f'Relatório enviado com sucesso! ID do arquivo: {file_id}')

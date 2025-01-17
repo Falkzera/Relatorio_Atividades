@@ -108,9 +108,6 @@ def remove_duplicate_files_in_subfolders(service, folder_id):
     # Iniciar o processamento da pasta principal
     process_folder(folder_id)
 
-# ===========================
-# Leitura de Arquivos `.parquet`
-# ===========================
 def read_parquet_files_from_drive(service, folder_id):
     """
     Lê todos os arquivos `.parquet` dentro de uma pasta e suas subpastas no Google Drive,

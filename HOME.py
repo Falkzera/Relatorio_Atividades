@@ -16,7 +16,6 @@ with st.container(): # DATA_BASE
 
 with st.container(): # CONFIGURAÇÕES de DATA
 
-    # ano atual
     ano_atual = datetime.now().year
     ano_passado = ano_atual - 1
     mes_antes = datetime.now().month - 1 if datetime.now().month > 1 else 12
@@ -25,7 +24,6 @@ with st.container(): # CONFIGURAÇÕES de DATA
 
 with st.container(): # LOGOTIPO/IMAGENS/TÍTULOS
 
-    # Imagem
     PET = "imagem/PET.png"
     st.sidebar.image(PET)
     st.sidebar.write('---')
@@ -106,34 +104,25 @@ with st.container(): # VALIDAÇÃO
         hide_index=True,
     )
 
-from google_drive_utils import (
-    authenticate_service_account,
-    create_folder_in_drive,
-    upload_file_to_drive,
-    remove_duplicate_files_in_subfolders
-)
+with st.container(): # ENVIO
+    from google_drive_utils import (
+        authenticate_service_account,
+        create_folder_in_drive,
+        upload_file_to_drive,
+        remove_duplicate_files_in_subfolders
+    )
 
-# Configurações do Google Drive
-TARGET_FOLDER_ID = "1d0KqEyocTO1lbnWS1u7hooSVJgv5Fz6Q"
+    TARGET_FOLDER_ID = "1d0KqEyocTO1lbnWS1u7hooSVJgv5Fz6Q"
 
-if st.sidebar.button('Enviar'):
-    # Autentica no Google Drive usando st.secrets
-    service = authenticate_service_account()
+    if st.sidebar.button('Enviar'):
 
-    # Cria ou acessa a pasta do aluno
-    aluno_folder_id = create_folder_in_drive(service, aluno, TARGET_FOLDER_ID)
+        service = authenticate_service_account()
 
-    # Salva relatório temporariamente
-    local_path = f'{aluno}_{selecione_mes}_{ano}.parquet'
+        aluno_folder_id = create_folder_in_drive(service, aluno, TARGET_FOLDER_ID)
+        local_path = f'{aluno}_{selecione_mes}_{ano}.parquet'
+        relatorio_pronto.to_parquet(local_path, index=False)
+        file_id = upload_file_to_drive(service, local_path, os.path.basename(local_path), aluno_folder_id)
+        os.remove(local_path)
+        remove_duplicate_files_in_subfolders(service, aluno_folder_id)
 
-
-    relatorio_pronto.to_parquet(local_path, index=False)
-
-    # Faz upload e substitui arquivos duplicados
-    file_id = upload_file_to_drive(service, local_path, os.path.basename(local_path), aluno_folder_id)
-    os.remove(local_path)
-
-    # Remove duplicados (se necessário, depende da lógica de substituição já implementada)
-    remove_duplicate_files_in_subfolders(service, aluno_folder_id)
-
-    st.sidebar.success(f'Relatório enviado com sucesso! ID do arquivo: {file_id}')
+        st.sidebar.success(f'Relatório enviado com sucesso! ID do arquivo: {file_id}')

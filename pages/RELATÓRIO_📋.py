@@ -10,7 +10,6 @@ import os
 import io
 from google_drive_utils import authenticate_service_account, read_parquet_files_from_drive
 
-
 st.set_page_config(layout='wide', page_title='Relatório de Atividades', page_icon='📊')
 
 with st.container(): # LOGOTIPO/IMAGENS/TÍTULOS
@@ -28,21 +27,14 @@ with st.container(): # LOGOTIPO/IMAGENS/TÍTULOS
 # Configurações do Google Drive
 FOLDER_ID = "1d0KqEyocTO1lbnWS1u7hooSVJgv5Fz6Q"  # ID da pasta no Google Drive
 
-# ============================
-# Carregar Dados do Google Drive
-# ============================
-service = authenticate_service_account()  # Agora usa st.secrets dentro do google_drive_utils
+service = authenticate_service_account() 
 df = read_parquet_files_from_drive(service, FOLDER_ID)
 
 if df.empty:
     st.error("Nenhum arquivo .parquet encontrado na pasta do Google Drive.")
-    # termina a execução do script
     st.stop()
 else:
     st.success("Dados carregados com sucesso!")
-
-
-
 
 with st.container(): # FILTROS ALUNO, DATA
 
@@ -57,13 +49,9 @@ with st.container(): # FILTROS ALUNO, DATA
         if selecionado != 'TODOS':
             df = df[df[col] == selecionado]
 
-
-# Ordenar o DataFrame com base na coluna "HORAS"
 df = df.sort_values(by="HORAS", ascending=False)
 
-
 tabs1, tabs2, tabs3, tabs4 = st.tabs(['DISCENTES', 'ATIVIDADES', 'GERAL', 'CONSOLIDADO'])
-
 
 with tabs1: # DISCENTES
     df_tabs1 = df.copy()

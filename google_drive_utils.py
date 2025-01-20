@@ -153,3 +153,33 @@ def read_parquet_files_from_drive(service, folder_id):
         return pd.concat(dfs, ignore_index=True)
     else:
         return pd.DataFrame()
+
+
+def download_file_by_name(service, folder_id, file_name):
+    """
+    Busca e baixa um arquivo específico pelo nome dentro de uma pasta no Google Drive.
+
+    Args:
+        service: Serviço autenticado da API do Google Drive.
+        folder_id: ID da pasta no Google Drive onde o arquivo está localizado.
+        file_name: Nome do arquivo a ser buscado.
+
+    Returns:
+        Objeto de arquivo em memória (BytesIO) ou None se o arquivo não for encontrado.
+    """
+    # Listar arquivos na pasta
+    files = list_files_in_folder(service, folder_id)
+    
+    # Filtrar pelo nome do arquivo
+    matching_files = [file for file in files if file['name'] == file_name]
+    
+    if not matching_files:
+        st.error(f"Arquivo '{file_name}' não encontrado na pasta.")
+        return None
+    
+    file_id = matching_files[0]['id']
+    
+    # Fazer o download do arquivo
+    file_data = download_file(service, file_id)
+    return file_data
+

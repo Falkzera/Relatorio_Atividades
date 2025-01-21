@@ -11,6 +11,10 @@ from datetime import datetime
 
 st.set_page_config(layout='wide', page_title='Relatório de Atividades', page_icon='📊')
 
+if "logged_in" not in st.session_state or not st.session_state.logged_in:
+    st.warning("Você precisa fazer login para acessar esta página.")
+    st.stop()
+
 with st.container(): # LOGOTIPO/IMAGENS/TÍTULOS
 
     PET = "imagem/PET.png"
@@ -68,62 +72,12 @@ with st.container():  # FILTROS ALUNO, DATA
 
 df = df.sort_values(by="HORAS", ascending=False)
 
-tabs1, tabs2, tabs3, tabs4 = st.tabs(['DISCENTES', 'ATIVIDADES', 'GERAL', 'CONSOLIDADO'])
+tabs1, tabs2,  = st.tabs(['GERAL', 'CONSOLIDADO'])
 
-with tabs1: # DISCENTES
-    df_tabs1 = df.copy()
-    df_tabs1 = df_tabs1.groupby(['ALUNO']).agg({'HORAS': 'sum'}).sort_values(by='HORAS', ascending=False).reset_index()
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.metric('TOTAL DE HORAS', f'{df_tabs1["HORAS"].sum():.0f}')
-    with col2:
-        st.metric('TOTAL DE DISCENTES', f'{df_tabs1["ALUNO"].nunique()}')
+with tabs1: # GERAL
+    st.write(df)
  
-    fig = go.Figure()
-    fig.add_trace(go.Pie(labels=df_tabs1['ALUNO'], values=df_tabs1['HORAS'], hole=.3))
-    fig.update_layout(title=f'Total de horas por discente')
-    st.plotly_chart(fig, use_container_width=True, key='tab1_chart')
-
-with tabs2: # DISCENTES
-    df_tabs2 = df.copy()
-    df_tabs2 = df_tabs2.groupby(['ATIVIDADE']).agg({'HORAS': 'sum'}).sort_values(by='HORAS', ascending=False).reset_index()
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.metric('TOTAL DE HORAS', f'{df_tabs2["HORAS"].sum():.0f}')
-
-    with col2: 
-        st.metric('TOTAL DE ATIVIDADES', f'{df_tabs2["ATIVIDADE"].nunique()}')
-
-    fig = go.Figure()
-    fig.add_trace(go.Pie(labels=df_tabs2['ATIVIDADE'], values=df_tabs2['HORAS'], hole=.3))
-    fig.update_layout(title=f'Total de horas por Atividade')
-    st.plotly_chart(fig, use_container_width=True)
-
-with tabs3: # GERAL
-    df_tabs3 = df.copy()
-    df_tabs3 = df_tabs3.groupby(['ALUNO', 'ATIVIDADE']).agg({'HORAS': 'sum'}).reset_index()
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        df_tabs3_sum = df_tabs3.groupby('ALUNO').agg({'HORAS': 'sum'}).reset_index()
-        df_tabs3_sum = df_tabs3_sum.sort_values(by='HORAS', ascending=False)
-        fig_bar = go.Figure()
-        fig_bar.add_trace(go.Bar(x=df_tabs3_sum['ALUNO'], y=df_tabs3_sum['HORAS'], marker=dict(color=df_tabs3_sum['HORAS'], colorscale='Blues')))
-        fig_bar.update_layout(title='Total de horas por discente')
-        st.plotly_chart(fig_bar, use_container_width=True, key='tab3_bar_chart')
-
-    with col2:
-        fig_pie = go.Figure()
-        fig_pie.add_trace(go.Pie(labels=df_tabs3['ATIVIDADE'], values=df_tabs3['HORAS'], hole=.3))
-        fig_pie.update_layout(title='Total de horas por Atividade')
-        st.plotly_chart(fig_pie, use_container_width=True, key='tab3_pie_chart')
-
-with tabs4: # CONSOLIDADO
+with tabs2: # CONSOLIDADO
     df_atividade = df.groupby('ATIVIDADE').agg({
         'JUSTIFICATIVA': 'first',
         'RESULTADO': 'first',

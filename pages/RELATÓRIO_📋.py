@@ -94,6 +94,24 @@ with tabs2: # CONSOLIDADO
     ano_escolhido = selecoes.get('Ano', 'TODOS')
     mes_escolhido = selecoes.get('Mês', 'TODOS')
 
+    df_atividade = df_atividade.groupby('Nome da Atividade').agg({
+        'Discentes Envolvidos': lambda x: ', '.join(sorted(set(x))),
+        'Período de Execução': lambda x: ', '.join(sorted(set(x))),
+        'Justificativa': 'first',
+        'Resultados Esperados': 'first'
+    }).reset_index()
+
+    def clean_periodo_execucao(row):
+        periodo_execucao = row['Período de Execução']
+        if 'Durante o mês' in periodo_execucao:
+            dias = [dia for dia in periodo_execucao.split(', ') if dia != 'Durante o mês']
+            if dias:
+                st.warning(f"A atividade '{row['Nome da Atividade']}' teve 'Durante o mês' removido, pois outros dias foram especificados por outros membros.")
+                return ', '.join(dias)
+        return periodo_execucao
+
+    df_atividade['Período de Execução'] = df_atividade.apply(clean_periodo_execucao, axis=1)
+    df_atividade['Período de Execução'] = df_atividade['Período de Execução'].apply(lambda x: ', '.join(sorted(x.split(', '))))
     st.subheader(f"Périodo selecionado para o relatório consolidado: {mes_escolhido}/{ano_escolhido}")
     st.caption("Modifique o período selecionando nos filtros a esquerda.")
 

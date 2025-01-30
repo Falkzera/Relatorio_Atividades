@@ -1,8 +1,8 @@
 import json
 import streamlit as st
-from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
+from google.oauth2.service_account import Credentials # type: ignore
+from googleapiclient.discovery import build # type: ignore
+from googleapiclient.http import MediaIoBaseDownload # type: ignore
 import io
 import pandas as pd
 
@@ -40,7 +40,7 @@ def upload_file_to_drive(service, file_path, file_name, folder_id):
     """
     Faz upload de um arquivo para uma pasta no Google Drive.
     """
-    from googleapiclient.http import MediaFileUpload
+    from googleapiclient.http import MediaFileUpload # type: ignore
     file_metadata = {
         'name': file_name,
         'parents': [folder_id]

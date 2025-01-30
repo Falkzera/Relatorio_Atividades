@@ -3,7 +3,7 @@ asttokens==2.4.1
 attrs==24.2.0
 blinker==1.8.2
 cachetools==5.5.0
-certifi==2024.8.30
+certifi==2024.12.14
 charset-normalizer==3.4.0
 click==8.1.7
 comm==0.2.2
@@ -86,6 +86,7 @@ rpds-py==0.21.0
 rsa==4.9
 scikit-learn==1.6.0
 scipy==1.14.0
+sidrapy==0.1.4
 six==1.16.0
 smmap==5.0.1
 SpeechRecognition==3.13.0

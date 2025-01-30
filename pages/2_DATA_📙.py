@@ -1,12 +1,11 @@
+import time 
 import pandas as pd
 import streamlit as st
 import sidrapy # type: ignore
+import plotly.graph_objects as go
 from datetime import datetime
 from Scripts.scripts import download_excel_button
-import time 
-import plotly.graph_objects as go
 from Models.marca import display_sidebar, display_header 
-
 
 ano_atual = datetime.now().year
 
@@ -15,7 +14,7 @@ display_sidebar()
 display_header("Base de Dados - PETECO 📊")
 
 if "logged_in" not in st.session_state or not st.session_state.logged_in:
-    st.warning("Você precisa fazer login para acessar esta página.")
+    st.warning("Você precisa fazer login para acessar esta página 🔐.")
     st.stop()
 
 else:

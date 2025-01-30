@@ -4,7 +4,7 @@ from Models.marca import display_sidebar, display_header
 st.set_page_config(layout='wide', page_title='Relatório de Atividades', page_icon='📊')
 
 display_sidebar()
-display_header("Base de Dados - PETECO 📊")
+display_header("Programa de Educação Tutorial - Economia/UFAL 📊")
 
 def login(username, password):
     stored_username = st.secrets["auth"]["USERNAME"]

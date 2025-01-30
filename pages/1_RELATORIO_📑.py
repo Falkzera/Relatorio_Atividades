@@ -20,10 +20,10 @@ from Models.marca import display_sidebar, display_header
 
 st.set_page_config(layout='wide', page_title='Relatório de Atividades', page_icon='📊')
 
-display_header("Relatório de Atividades")
+display_header("Relatório de Atividades 📝")
 
 if "logged_in" not in st.session_state or not st.session_state.logged_in:
-    st.warning("Você precisa fazer login para acessar esta página.")
+    st.warning("Você precisa fazer login para acessar esta página 🔐.")
     display_sidebar()
     st.stop()
 
@@ -32,7 +32,9 @@ else:
     tabs = st.tabs(["Relatório de Atividades", "Relatório Consolidado"])
 
     with tabs[0]: # RELATÓRIO DE ATIVIDADES
+
         with st.container(): # API GOOGLE DRIVE
+            
             def data_load():
 
                     service = authenticate_service_account()

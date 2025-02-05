@@ -171,8 +171,8 @@ else:
                 elif relatorio_pronto['Período de Execução'].eq('').any():
                     st.sidebar.error('Atividade(s) sem dia preenchido: **{}**'.format(', '.join(relatorio_pronto[relatorio_pronto['DIA'].eq('')]['ATIVIDADE'].tolist())))
                                     
-                elif relatorio_pronto['HORAS'].sum() < 10:
-                    st.sidebar.warning('Total de horas menor que 10.')
+                elif relatorio_pronto['HORAS'].sum() < 3:
+                    st.sidebar.warning('Total de horas menor que 3.')
 
                 else:
                     st.write('---')
@@ -313,6 +313,9 @@ else:
             st.subheader(f"Périodo selecionado para o relatório consolidado: {mes_escolhido}/{ano_escolhido}")
             st.caption("Modifique o período selecionando nos filtros a esquerda.")
 
+            df_atividade['Período de Execução'] = df_atividade['Período de Execução'].astype(str)
+            df_atividade['Período de Execução'] = df_atividade['Período de Execução'].str.split(', ').apply(lambda x: sorted(set(x)))
+            df_atividade['Período de Execução'] = df_atividade['Período de Execução'].apply(lambda x: ', '.join(x))
             st.table(df_atividade)
 
             def to_excel(df):

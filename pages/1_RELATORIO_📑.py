@@ -201,19 +201,6 @@ else:
                             st.sidebar.success(f'Relatório enviado com sucesso! ID do arquivo: {file_id}')
                             st.balloons()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
     with tabs[1]: # RELATÓRIO CONSOLIDADO
 
         with st.container(): # API GOOGLE DRIVE

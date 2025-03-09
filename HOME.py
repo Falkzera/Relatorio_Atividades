@@ -1,33 +1,34 @@
 import streamlit as st
-from Models.marca import display_sidebar, display_header 
 
 st.set_page_config(layout='wide', page_title='Relatório de Atividades', page_icon='📊')
 
-display_sidebar()
-display_header("Programa de Educação Tutorial - Economia/UFAL 📊")
+st.markdown("""
+    <style>
+    [data-testid="stSidebarNav"] {display: none;}
+    </style>
+""", unsafe_allow_html=True)
 
-def login(username, password):
-    stored_username = st.secrets["auth"]["USERNAME"]
-    stored_password = st.secrets["auth"]["PASSWORD"]
-    
-    return username == stored_username and password == stored_password
+if "logged_in" not in st.session_state or not st.session_state.logged_in:
+    st.switch_page("pages/login.py")
 
-if "logged_in" not in st.session_state:
-  st.session_state.logged_in = False
+col1, col2 = st.columns([3, 1])
+col1.write("Você está na página inicial do sistema.")
 
-if not st.session_state.logged_in:
-  st.title("Login")
+st.sidebar.title("📌 Menu de Navegação")
 
-  input_username = st.text_input("Usuário")
-  input_password = st.text_input("Senha", type="password")
+menu_items = ["🏠 HOME"]
+if "page_access" in st.session_state:
+    if "consolidado" in st.session_state.page_access:
+        menu_items.append("📊 Consolidado")
 
-  if st.button("Entrar"):
-    if login(input_username, input_password):
-      st.session_state.logged_in = True
-    else:
-      st.error("Usuário ou senha incorretos.")
-else:
-    st.success("Login efetuado com sucesso!")
+if "selected_page" not in st.session_state or st.session_state.selected_page not in menu_items:
+    st.session_state.selected_page = "🏠 HOME"
 
+selected_page = st.sidebar.selectbox("📌 Escolha uma página:", menu_items, index=menu_items.index(st.session_state.selected_page))
 
- 
+if st.button("**Logar com outro usuário** 🔑"):
+    st.session_state.logged_in = False
+    st.session_state.username = ""
+    st.session_state.page_access = []
+    st.session_state.tab_access = []
+    st.switch_page("pages/login.py")  # Redireciona para a tela de login

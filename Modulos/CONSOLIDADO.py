@@ -43,7 +43,7 @@ def CONSOLIDADO():
                     default_value = ano_atual if ano_atual in options else 'TODOS'
                 elif label == 'Mês':
                     default_value = mes_atual if mes_atual in options else 'TODOS'
-
+                
                 selecionado = st.selectbox(
                     f'Selecione o {label}:', 
                     options, 
@@ -81,7 +81,14 @@ def CONSOLIDADO():
         }).reset_index()
 
         with st.expander("ℹ️ Informação", expanded=False):
-            df_atividade['Período de Execução'] = df_atividade.apply(utils.clean_periodo_execucao, axis=1)
+            try:
+                df_atividade['Período de Execução'] = df_atividade.apply(utils.clean_periodo_execucao, axis=1)
+            except ValueError:
+                st.error("Não existe dados para o período selecionado.")
+                utils.outro_usuario()
+                utils.display_links()
+                st.stop()
+ 
         df_atividade['Período de Execução'] = df_atividade['Período de Execução'].apply(lambda x: ', '.join(sorted(x.split(', '))))
         st.subheader(f"Périodo selecionado para o relatório consolidado: {mes_escolhido}/{ano_escolhido}")
         st.caption("Modifique o período selecionando nos filtros.")
@@ -89,7 +96,6 @@ def CONSOLIDADO():
         df_atividade['Período de Execução'] = df_atividade['Período de Execução'].astype(str)
         df_atividade['Período de Execução'] = df_atividade['Período de Execução'].str.split(', ').apply(lambda x: sorted(set(x)))
         df_atividade['Período de Execução'] = df_atividade['Período de Execução'].apply(lambda x: ', '.join(x))
-
 
 
 

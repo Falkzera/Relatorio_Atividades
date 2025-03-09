@@ -122,30 +122,25 @@ def remove_duplicate_files_in_subfolders(service, folder_id):
 
 
 
-
-# def read_parquet_files_from_drive(service, folder_id):
+# #-------------------------------------------------------
+# @st.cache_data(ttl=3600)  # Cache de 1 hora (3600 segundos)
+# def read_parquet_files_from_drive(_service, folder_id):
 #     """
-#     Lê todos os arquivos `.parquet` dentro de uma pasta e suas subpastas no Google Drive,
-#     e combina em um único DataFrame.
+#     Lê todos os arquivos .parquet dentro de uma pasta e suas subpastas no Google Drive,
+#     e combina em um único DataFrame (com cache de 1 hora).
 #     """
 #     def list_files_and_folders_in_drive(folder_id):
-#         """
-#         Lista arquivos e pastas dentro de uma pasta no Google Drive.
-#         """
 #         query = f"'{folder_id}' in parents and trashed = false"
-#         results = service.files().list(q=query, fields="files(id, name, mimeType)").execute()
+#         results = _service.files().list(q=query, fields="files(id, name, mimeType)").execute()
 #         return results.get('files', [])
 
 #     def get_all_parquet_files(folder_id):
-#         """
-#         Busca recursivamente todos os arquivos `.parquet` dentro da pasta e subpastas.
-#         """
 #         items = list_files_and_folders_in_drive(folder_id)
 #         parquet_files = []
 
 #         for item in items:
 #             if item['mimeType'] == 'application/vnd.google-apps.folder':
-#                 parquet_files.extend(get_all_parquet_files(item['id'])) 
+#                 parquet_files.extend(get_all_parquet_files(item['id']))
 #             elif item['name'].endswith('.parquet'):
 #                 parquet_files.append(item)
 
@@ -155,30 +150,111 @@ def remove_duplicate_files_in_subfolders(service, folder_id):
 
 #     dfs = []
 #     for file in parquet_files:
-#         request = service.files().get_media(fileId=file['id'])
+#         request = _service.files().get_media(fileId=file['id'])
 #         file_data = io.BytesIO()
 #         downloader = MediaIoBaseDownload(file_data, request)
 #         done = False
 #         while not done:
 #             status, done = downloader.next_chunk()
-#         file_data.seek(0) 
-#         dfs.append(pd.read_parquet(file_data)) 
+#         file_data.seek(0)
+#         dfs.append(pd.read_parquet(file_data))
 
 #     if dfs:
-#         return pd.concat(dfs, ignore_index=True)
+#         df = pd.concat(dfs, ignore_index=True)
+#         # Atualiza o horário da última carga
+#         st.session_state.last_updated = pd.Timestamp.now(tz='America/Sao_Paulo').strftime('%d/%m/%Y %H:%M:%S')
+#         return df
 #     else:
+#         return pd.DataFrame()
+
+# # --------------------------------------------------
+# # Para usar a função em seu código principal:
+
+# # service = ...  # Sua conexão com o Google Drive
+# # folder_id = ... # ID da pasta raiz
+
+# # df = read_parquet_files_from_drive(service, folder_id)
+
+# # --------------------------------------------------
+
+
+
+
+
+
+
+
+# 2--------------------
+
+# @st.cache_data(ttl=3600)  # Cache de 1 hora (3600 segundos)
+# def read_parquet_files_from_drive(_service, folder_id):
+#     """
+#     Lê todos os arquivos .parquet dentro de uma pasta e suas subpastas no Google Drive,
+#     e combina em um único DataFrame (com cache de 1 hora), exibindo o progresso da operação.
+#     """
+#     def list_files_and_folders_in_drive(folder_id):
+#         query = f"'{folder_id}' in parents and trashed = false"
+#         results = _service.files().list(q=query, fields="files(id, name, mimeType)").execute()
+#         return results.get('files', [])
+
+#     def get_all_parquet_files(folder_id):
+#         items = list_files_and_folders_in_drive(folder_id)
+#         parquet_files = []
+#         for item in items:
+#             if item['mimeType'] == 'application/vnd.google-apps.folder':
+#                 parquet_files.extend(get_all_parquet_files(item['id']))
+#             elif item['name'].endswith('.parquet'):
+#                 parquet_files.append(item)
+#         return parquet_files
+
+#     # Recupera todos os arquivos .parquet recursivamente
+#     parquet_files = get_all_parquet_files(folder_id)
+    
+#     dfs = []
+#     total_files = len(parquet_files)
+    
+#     # Inicializa a barra de progresso para o processamento dos arquivos
+#     progress_bar = st.progress(0)
+#     st.write("Iniciando processamento dos arquivos .parquet...")
+    
+#     for idx, file in enumerate(parquet_files):
+#         st.write(f"Baixando e lendo: {file['name']}")
+#         request = _service.files().get_media(fileId=file['id'])
+#         file_data = io.BytesIO()
+#         downloader = MediaIoBaseDownload(file_data, request)
+#         done = False
+#         while not done:
+#             status, done = downloader.next_chunk()
+#             # Aqui você pode, se desejar, exibir o progresso do download individual
+#             # Por exemplo, exibindo status.progress() ou similares.
+#         file_data.seek(0)
+#         dfs.append(pd.read_parquet(file_data))
+#         # Atualiza a barra de progresso global
+#         progress_bar.progress((idx + 1) / total_files)
+    
+#     if dfs:
+#         df = pd.concat(dfs, ignore_index=True)
+#         # Atualiza o horário da última carga
+#         st.session_state.last_updated = pd.Timestamp.now(tz='America/Sao_Paulo').strftime('%d/%m/%Y %H:%M:%S')
+#         st.write("Processamento concluído.")
+#         return df
+#     else:
+#         st.write("Nenhum arquivo .parquet encontrado.")
 #         return pd.DataFrame()
 
 
 
-# --------------------------------------------------
-# versao que estava (2)
-@st.cache_data(ttl=3600)  # Cache de 1 hora (3600 segundos)
+@st.cache_data(ttl=3600)
 def read_parquet_files_from_drive(_service, folder_id):
     """
     Lê todos os arquivos .parquet dentro de uma pasta e suas subpastas no Google Drive,
-    e combina em um único DataFrame (com cache de 1 hora).
+    combinando os arquivos já carregados (salvos em cache no session_state) com os novos.
+    Se um arquivo for atualizado (ID alterado), ele será recarregado.
     """
+    # Inicializa o cache de arquivos, se ainda não existir
+    if "cached_parquet_files" not in st.session_state:
+        st.session_state["cached_parquet_files"] = {}
+
     def list_files_and_folders_in_drive(folder_id):
         query = f"'{folder_id}' in parents and trashed = false"
         results = _service.files().list(q=query, fields="files(id, name, mimeType)").execute()
@@ -187,50 +263,55 @@ def read_parquet_files_from_drive(_service, folder_id):
     def get_all_parquet_files(folder_id):
         items = list_files_and_folders_in_drive(folder_id)
         parquet_files = []
-
         for item in items:
             if item['mimeType'] == 'application/vnd.google-apps.folder':
                 parquet_files.extend(get_all_parquet_files(item['id']))
             elif item['name'].endswith('.parquet'):
                 parquet_files.append(item)
-
         return parquet_files
-    
+
+    # Recupera todos os arquivos .parquet disponíveis na pasta e subpastas
     parquet_files = get_all_parquet_files(folder_id)
 
-    dfs = []
-    for file in parquet_files:
-        request = _service.files().get_media(fileId=file['id'])
-        file_data = io.BytesIO()
-        downloader = MediaIoBaseDownload(file_data, request)
-        done = False
-        while not done:
-            status, done = downloader.next_chunk()
-        file_data.seek(0)
-        dfs.append(pd.read_parquet(file_data))
+    # Identifica os arquivos que ainda não foram carregados (por ID)
+    new_files = [file for file in parquet_files if file["id"] not in st.session_state["cached_parquet_files"]]
 
+    total_new = len(new_files)
+    progress_bar = st.progress(0)
+    
+    if total_new > 0:
+        st.sidebar.caption(f"Processando {total_new} novos arquivos .parquet...")
+        for idx, file in enumerate(new_files):
+            print(f"Baixando e lendo: {file['name']}")
+            request = _service.files().get_media(fileId=file['id'])
+            file_data = io.BytesIO()
+            downloader = MediaIoBaseDownload(file_data, request)
+            done = False
+            while not done:
+                status, done = downloader.next_chunk()
+            file_data.seek(0)
+            df_file = pd.read_parquet(file_data)
+            # Armazena o DataFrame no cache (session_state) para uso futuro
+            st.session_state["cached_parquet_files"][file["id"]] = df_file
+            progress_bar.progress((idx + 1) / total_new)
+    else:
+        st.sidebar.caption("Nenhum novo arquivo .parquet encontrado. Utilizando arquivos previamente carregados.")
+
+    # Combina os DataFrames dos arquivos que estão na pasta atual e foram armazenados no cache
+    dfs = []
+    current_file_ids = {file["id"] for file in parquet_files}
+    for file_id in current_file_ids:
+        if file_id in st.session_state["cached_parquet_files"]:
+            dfs.append(st.session_state["cached_parquet_files"][file_id])
+    
     if dfs:
         df = pd.concat(dfs, ignore_index=True)
-        # Atualiza o horário da última carga
         st.session_state.last_updated = pd.Timestamp.now(tz='America/Sao_Paulo').strftime('%d/%m/%Y %H:%M:%S')
+        st.sidebar.caption("Processamento concluído.")
         return df
     else:
+        st.write("Nenhum arquivo .parquet encontrado.")
         return pd.DataFrame()
-
-# --------------------------------------------------
-# Para usar a função em seu código principal:
-
-# service = ...  # Sua conexão com o Google Drive
-# folder_id = ... # ID da pasta raiz
-
-# df = read_parquet_files_from_drive(service, folder_id)
-
-# --------------------------------------------------
-
-
-
-
-
 
 
 

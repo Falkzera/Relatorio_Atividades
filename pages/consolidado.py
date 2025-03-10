@@ -2,7 +2,6 @@ import streamlit as st
 import importlib
 import Scripts.utils as utils
 
-# utils.marca()
 utils.display_sidebar()
 utils.display_header("Relatório Consolidado 📊")
 utils.setup_page("consolidado")
@@ -29,7 +28,7 @@ if 'selected_tab' not in st.session_state:
 
 # Criando as abas dinâmicas apenas com as permitidas
 if tabs:
-    # Usando st.radio para seleção de abas (pode ser substituído por st.tabs se preferir)
+    # Usando st.selectbox para seleção de abas (pode ser substituído por st.tabs se preferir)
     selected_tab = st.sidebar.selectbox("Selecione a aba:", tabs, index=tabs.index(st.session_state.selected_tab))
 
     # Atualiza o estado da aba selecionada
@@ -42,8 +41,6 @@ if tabs:
         getattr(module, module_path.split(".")[-1])()  # Executa a função principal do módulo
 else:
     st.error("🚫 Você não tem acesso a nenhum relatório.")
-
-
 
 utils.outro_usuario()
 utils.display_links()

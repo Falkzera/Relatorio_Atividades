@@ -47,19 +47,16 @@ if st.button("Entrar", help="Clique para fazer login", icon="🚪", use_containe
         st.session_state.tab_access = tab_access
 
         # **Etapa 1: Verificar se o usuário tem acesso a todas as páginas**
-        if {"consolidado", "relatorio", "dashboards"}.issubset(set(page_access)):
+        if {"consolidado", "qualquercoisa"}.issubset(set(page_access)):
             st.session_state.selected_page = "🏠 Home"
             st.switch_page("HOME.py")
 
         # **Se o usuário tem acesso APENAS a uma página, redirecioná-lo diretamente**
         elif len(page_access) == 1:
             only_page = page_access[0]
-            if only_page == "relatorio":
-                st.switch_page("pages/relatorio.py")
-            elif only_page == "consolidado":
+            if only_page == "consolidado":
                 st.switch_page("pages/consolidado.py")
-            elif only_page == "dashboards":
-                st.switch_page("pages/dashboards.py")
+
 
         # **Se não cair em nenhum dos casos anteriores, joga para Home**
         else:

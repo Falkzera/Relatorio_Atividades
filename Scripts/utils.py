@@ -37,8 +37,8 @@ def setup_page(page_name):
 
     # Criando menu lateral de navegação com base nas permissões do usuário
     menu_items = []
-    if "consolidado" in st.session_state.page_access:
-        menu_items.append("Consolidado")
+    if "site" in st.session_state.page_access:
+        menu_items.append("site")
 
     # Garantir que selected_page esteja na lista
     if "selected_page" not in st.session_state or st.session_state.selected_page not in menu_items:
@@ -223,7 +223,7 @@ def atualizar_dados():
 def display_sidebar():
     """Exibe a imagem do PET e links úteis na sidebar."""
     with st.sidebar:
-        st.image('Image/PET.png')
+        # st.image('Image/PET.png')
         st.write('---')
 def display_links():
     with st.sidebar:
@@ -252,5 +252,5 @@ def display_header(title="Relatório de Atividades"):
     with st.container():
         col1, col2 = st.columns([3, 1])
         col1.title(title)
-        col2.image("Image/PET.png")
+        # col2.image("Image/PET.png")
 

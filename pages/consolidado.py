@@ -28,8 +28,13 @@ if 'selected_tab' not in st.session_state:
 
 # Criando as abas dinâmicas apenas com as permitidas
 if tabs:
-    # Usando st.selectbox para seleção de abas (pode ser substituído por st.tabs se preferir)
-    selected_tab = st.sidebar.selectbox("Selecione a aba:", tabs, index=tabs.index(st.session_state.selected_tab))
+    try:
+        # Usando st.selectbox para seleção de abas (pode ser substituído por st.tabs se preferir)
+        selected_tab = st.sidebar.selectbox("Selecione a aba:", tabs, index=tabs.index(st.session_state.selected_tab))
+    except ValueError:
+        # Redireciona o usuário para a primeira aba que ele tem acesso
+        st.session_state.selected_tab = tabs[0]
+        selected_tab = st.session_state.selected_tab
 
     # Atualiza o estado da aba selecionada
     # st.session_state.selected_tab = selected_tab

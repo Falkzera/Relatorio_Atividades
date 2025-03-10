@@ -281,6 +281,7 @@ def read_parquet_files_from_drive(_service, folder_id):
     
     if total_new > 0:
         st.sidebar.caption(f"Processando {total_new} novos arquivos .parquet...")
+        st.sidebar.caption("Aguarde, isso pode levar alguns minutos... ☕")
         for idx, file in enumerate(new_files):
             print(f"Baixando e lendo: {file['name']}")
             request = _service.files().get_media(fileId=file['id'])

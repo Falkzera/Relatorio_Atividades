@@ -36,8 +36,9 @@ if tabs:
         st.session_state.selected_tab = tabs[0]
         selected_tab = st.session_state.selected_tab
 
-    # Atualiza o estado da aba selecionada
-    # st.session_state.selected_tab = selected_tab
+        # Usando st.selectbox para seleção de abas (pode ser substituído por st.tabs se preferir)
+        selected_tab = st.sidebar.selectbox("Selecione a aba:", tabs, index=tabs.index(st.session_state.selected_tab))
+
 
     # Carrega o conteúdo da aba selecionada
     if selected_tab in tab_modules:

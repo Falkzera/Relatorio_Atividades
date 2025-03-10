@@ -223,7 +223,7 @@ def atualizar_dados():
 def display_sidebar():
     """Exibe a imagem do PET e links úteis na sidebar."""
     with st.sidebar:
-        # st.image('Image/PET.png')
+        st.image('Image/PET.png')
         st.write('---')
 def display_links():
     with st.sidebar:
@@ -252,5 +252,5 @@ def display_header(title="Relatório de Atividades"):
     with st.container():
         col1, col2 = st.columns([3, 1])
         col1.title(title)
-        # col2.image("Image/PET.png")
+        col2.image("Image/PET.png")
 

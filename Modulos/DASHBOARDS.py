@@ -8,6 +8,8 @@ import streamlit as st
 from plotly.subplots import make_subplots
 from Scripts.google_drive_utils import (authenticate_service_account, read_parquet_files_from_drive)
 
+import plotly.express as px
+
 def DASHBOARDS():
 
     with st.container(): # API GOOGLE DRIVE
@@ -32,18 +34,14 @@ def DASHBOARDS():
 
         base_colors = ['#0b4754', '#54180b', '#9a6233', '#ffdd63']
 
-    
-
         col1, col2, col3 = st.columns(3)
 
-        # Seletor de Aluno
         aluno_options = ["TODOS"] + sorted(df["ALUNO"].unique())
         selected_alunos = col1.multiselect("Aluno", options=aluno_options, default=["TODOS"])
-        # Se "TODOS" estiver junto com outras opções, remove-o.
+
         if "TODOS" in selected_alunos and len(selected_alunos) > 1:
             selected_alunos = [aluno for aluno in selected_alunos if aluno != "TODOS"]
 
-        # Seletor de Ano
         if "TODOS" not in selected_alunos:
             anos_disponiveis = sorted(df[df["ALUNO"].isin(selected_alunos)]["ANO"].unique())
         else:
@@ -53,7 +51,6 @@ def DASHBOARDS():
         if "TODOS" in selected_anos and len(selected_anos) > 1:
             selected_anos = [ano for ano in selected_anos if ano != "TODOS"]
 
-        # Seletor de Mês
         if "TODOS" not in selected_alunos and "TODOS" not in selected_anos:
             meses_disponiveis = sorted(df[(df["ALUNO"].isin(selected_alunos)) & (df["ANO"].isin(selected_anos))]["MES"].unique())
         elif "TODOS" not in selected_anos:
@@ -67,7 +64,6 @@ def DASHBOARDS():
         if "TODOS" in selected_meses and len(selected_meses) > 1:
             selected_meses = [mes for mes in selected_meses if mes != "TODOS"]
 
-        # Filtrando o DataFrame com base nas seleções
         df_filtrado = df.copy()
         if "TODOS" not in selected_alunos:
             df_filtrado = df_filtrado[df_filtrado["ALUNO"].isin(selected_alunos)]
@@ -75,10 +71,6 @@ def DASHBOARDS():
             df_filtrado = df_filtrado[df_filtrado["ANO"].isin(selected_anos)]
         if "TODOS" not in selected_meses:
             df_filtrado = df_filtrado[df_filtrado["MES"].isin(selected_meses)]
-
-
-
-
 
         df_filtrado["DATA"] = pd.to_datetime(df_filtrado["ANO"].astype(str) + "-" + df_filtrado["MES"].astype(str) + "-01")
         df_filtrado = df_filtrado.sort_values("DATA")
@@ -97,7 +89,7 @@ def DASHBOARDS():
 
         st.subheader("Top 3 atividades com maior número de horas")
         
-        cols = st.columns(3)  # Cria três colunas para exibir os metrics dos top 3
+        cols = st.columns(3) 
 
         for i, row in enumerate(top_atividades.itertuples()):
             with cols[i]:
@@ -134,7 +126,6 @@ def DASHBOARDS():
                         st.info(f"📅 Périodo selecionado (**{mes_selecionado}**) em detalhes")
 
                         df_detalhado = df_filtrado[df_filtrado["ANO_MES"] == mes_selecionado]
-
                         atividades_mes = df_detalhado.groupby('ATIVIDADE', as_index=False)['HORAS'].sum()
 
                         with st.container(): # Gráficos detalhados
@@ -193,9 +184,11 @@ def DASHBOARDS():
                     line_data_selecionadas.index = line_data_selecionadas.index.astype(str)
                     fig_selecionadas = go.Figure()
                     stackgroup = 'one' if st.radio("Ativar Stackgroup", ("Sim", "Não"), index=0, horizontal=True) == "Sim" else None
+
                     for atividade in line_data_selecionadas.columns:
                         y_values = line_data_selecionadas[atividade].replace(0, np.nan)
                         fig_selecionadas.add_trace(go.Scatter(x=line_data_selecionadas.index, y=y_values, mode='lines', name=atividade, stackgroup=stackgroup))
+
                     fig_selecionadas.update_layout(title=f'Quantidade de horas ao longo do tempo por atividades selecionadas - {total_hours} horas', title_font=dict(size=20), xaxis=dict(title=None, tickfont=dict(size=15)), yaxis=dict(title=None, tickfont=dict(size=15)), legend=dict(font=dict(size=15), orientation='h', x=0.5, xanchor='center', y=-0.3), autosize=False, width=1000, height=500)
                     fig_selecionadas.update_xaxes(dtick='M1', tickformat='%b %Y', tickangle=90)
                     st.plotly_chart(fig_selecionadas, use_container_width=True)
@@ -227,7 +220,6 @@ def DASHBOARDS():
                 if len(df_atividade) >= 1: # SE A ATIVIDADE TIVER REGISTROS
 
                     with tabs1:
-                        # df_atividade tem que agrupar por aluno
 
                         df_atividade_agg = df_atividade.groupby("DATA").sum().reset_index()
 
@@ -266,8 +258,6 @@ def DASHBOARDS():
 
         st.data_editor(df_grouped, hide_index=True, column_config={"ATIVIDADE": st.column_config.TextColumn("ATIVIDADE", width=len("ATIVIDADE") * 8), "TOTAL_HORAS": st.column_config.NumberColumn("TOTAL HORAS", width=col_width_total), "PERCENTUAL": st.column_config.TextColumn("PERCENTUAL", width=col_width_percent), "FREQUENCIA": st.column_config.NumberColumn("FREQUENCIA", width=col_width_freq), "HORAS_LIST": st.column_config.LineChartColumn("GRÁFICO", help="Mini-gráfico com as horas registradas por data para cada atividade", width="small", y_min=0)})
 
-        # if filtro_aluno == "TODOS":
-
         st.write("---")
         st.subheader(f"*- Detalhamento por alunos*")
         tab1, tab2 = st.tabs(["Alunos", "Atividades"])
@@ -282,7 +272,7 @@ def DASHBOARDS():
             total_hours = df_aluno_agg["HORAS"].sum()
             fig.update_layout(title=f'Quantidade de horas por aluno', title_font=dict(size=20), xaxis=dict(title=None, tickfont=dict(size=15)), yaxis=dict(title=None, tickfont=dict(size=15)))
             fig.update_layout(autosize=False, width=1000, height=500)
-            # st.plotly_chart(fig, use_container_width=True)
+
             event_dict = st.plotly_chart(fig, use_container_width=True, on_select="rerun", theme="streamlit")
 
             if event_dict and 'selection' in event_dict:
@@ -295,7 +285,6 @@ def DASHBOARDS():
                         st.info(f"📅 Aluno selecionado (**{aluno_selecionado}**) em detalhes")
 
                         df_detalhado = df_filtrado[df_filtrado["ALUNO"] == aluno_selecionado]
-
                         df_aluno_selecionado = df_detalhado.groupby('ATIVIDADE', as_index=False)['HORAS'].sum()
 
                         with st.container(): # Gráficos detalhados
@@ -323,59 +312,69 @@ def DASHBOARDS():
                             
                             fig_expander.update_xaxes(showticklabels=False, row=1, col=1)
                         
-                            fig_expander.update_layout(
-                                title_text=f'Distribuição de: {aluno_selecionado}',
-                                legend=dict(font=dict(size=15), orientation='h', x=0.5, xanchor='center', y=-0.2),
+                            fig_expander.update_layout(title_text=f'Distribuição de: {aluno_selecionado}', legend=dict(font=dict(size=15), orientation='h', x=0.5, xanchor='center', y=-0.2),
                                 autosize=False, width=1800, height=500, margin=dict(l=50, r=50, t=50, b=50))
 
                             st.plotly_chart(fig_expander, use_container_width=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         with tab2:
 
             df_atividade_agg = df_filtrado.groupby("ATIVIDADE")["HORAS"].sum().reset_index()
             df_atividade_agg = df_atividade_agg.sort_values(by="HORAS", ascending=False) 
+
             fig = go.Figure()
             fig.add_trace(go.Bar(x=df_atividade_agg["ATIVIDADE"], y=df_atividade_agg["HORAS"], marker_color='#0b4757', text=df_atividade_agg["HORAS"], textposition='inside', name='Horas'))
             fig.add_trace(go.Scatter(x=df_atividade_agg["ATIVIDADE"], y=df_atividade_agg["HORAS"], name=''))
+
             total_hours = df_atividade_agg["HORAS"].sum()
+
             fig.update_layout(title=f'Quantidade de horas por atividade', title_font=dict(size=20), xaxis=dict(title=None, tickfont=dict(size=15)), yaxis=dict(title=None, tickfont=dict(size=15)))
             fig.update_layout(autosize=False, width=1000, height=800)
             fig.update_xaxes(dtick='M1', tickformat='%b %Y', tickangle=90)
+
             st.plotly_chart(fig, use_container_width=True)
+
+
+
+    with st.container(): # Gráfico de dispersão 
+            
+            st.write('---')
+            st.subheader('- *Gráfico de dispersão*')
+            tabs1, tabs2 = st.tabs(["Alunos", "Atividades"])
+
+            with tabs1:
+                df_usado = df_atividade_agg
+
+                fig = px.scatter(
+                    df_usado,
+                    x=df_usado['HORAS'], # a melhor opcao para o eixo x é coluna de valores
+                    y=df_usado['ATIVIDADE'], # para o eixo y é a coluna de categorias
+                    size=df_usado['HORAS'], # para size é a coluna de valores
+                    color=df_usado['ATIVIDADE'], # para color é a coluna de categorias
+                    hover_name=df_usado['ATIVIDADE'],
+                    log_x=True,
+                    size_max=60,
+                )
+
+                st.plotly_chart(fig, theme="streamlit", use_container_width=True)
+
+
+            with tabs2:
+                df_usado = df_aluno_agg
+
+                fig = px.scatter(
+                    df_usado,
+                    x=df_usado['HORAS'], # a melhor opcao para o eixo x é coluna de valores
+                    y=df_usado['ALUNO'], # para o eixo y é a coluna de categorias
+                    size=df_usado['HORAS'], # para size é a coluna de valores
+                    color=df_usado['ALUNO'], # para color é a coluna de categorias
+                    hover_name=df_usado['ALUNO'],
+                    log_x=True,
+                    size_max=60,
+                )
+
+                st.plotly_chart(fig, theme="streamlit", use_container_width=True)
+
+
 
     utils.atualizar_dados()

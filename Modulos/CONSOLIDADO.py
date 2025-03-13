@@ -83,8 +83,7 @@ def CONSOLIDADO():
             'Discentes Envolvidos': lambda x: ', '.join(sorted(set(x))),
             'Período de Execução': lambda x: ', '.join(sorted(set(x))),
             'Justificativa': 'first',
-            'Resultados Esperados': 'first'
-        }).reset_index()
+            'Resultados Esperados': 'first'}).reset_index()
 
         with st.expander("ℹ️ Informação", expanded=False):
             try:
@@ -103,16 +102,7 @@ def CONSOLIDADO():
         df_atividade['Período de Execução'] = df_atividade['Período de Execução'].str.split(', ').apply(lambda x: sorted(set(x)))
         df_atividade['Período de Execução'] = df_atividade['Período de Execução'].apply(lambda x: ', '.join(x))
 
-
-
-
         st.data_editor(df_atividade, hide_index=True)
-
-
-
-
-
-
 
         df_excel = utils.to_excel(df_atividade)
         st.download_button(

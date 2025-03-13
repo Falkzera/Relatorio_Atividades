@@ -72,8 +72,6 @@ def outro_usuario():
         st.session_state.tab_access = []
         st.switch_page("pages/login.py")
 
-
-
 @st.cache_data(ttl= 60 * 60 * 24)
 def data_load():
     service = authenticate_service_account()
@@ -228,12 +226,6 @@ def atualizar_dados():
 
         # st.caption(f'Faltam {int(horas)} horas, {int(minutos)} minutos e {int(segundos)} segundos para a próxima atualização')
 
-
-
-
-
-
-
 def display_sidebar():
     """Exibe a imagem do PET e links úteis na sidebar."""
     with st.sidebar:
@@ -267,4 +259,3 @@ def display_header(title="Relatório de Atividades"):
         col1, col2 = st.columns([3, 1])
         col1.title(title)
         col2.image("Image/PET.png")
-

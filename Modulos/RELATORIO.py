@@ -17,9 +17,7 @@ def RELATORIO():
     df_atividade, df_alunos, df_email = carregamento()
 
     ano_atual = datetime.now().year
-    ano_passado = ano_atual - 1
     mes_antes = datetime.now().month - 1 if datetime.now().month > 1 else 12
-    ano_antes = ano_atual if datetime.now().month > 1 else ano_passado
     mes_atual = datetime.now().month
     
     st.sidebar.write('---')

@@ -157,8 +157,6 @@ def get_all_parquet_files(_service, folder_id):
             parquet_files.append(item)
     return parquet_files
 
-
-
 @st.cache_data(ttl=3600)
 def baixar_parquet_do_drive(_service, file_id):
     request = _service.files().get_media(fileId=file_id)
@@ -223,16 +221,6 @@ def read_parquet_files_from_drive(_service, folder_id='1d0KqEyocTO1lbnWS1u7hooSV
 
     return df_completo
 
-
-
-
-
-
-
-
-
-
-
 def download_file_by_name(service, folder_id, file_name):
     """
     Busca e baixa um arquivo específico pelo nome dentro de uma pasta no Google Drive.
@@ -260,4 +248,3 @@ def download_file_by_name(service, folder_id, file_name):
     # Fazer o download do arquivo
     file_data = download_file(service, file_id)
     return file_data
-

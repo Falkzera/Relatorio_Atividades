@@ -6,19 +6,25 @@ from googleapiclient.http import MediaIoBaseUpload # type: ignore
 from datetime import datetime
 from Scripts.google_drive_utils import authenticate_service_account, read_parquet_files_from_drive
 
-
 def CONSOLIDADO():
 
     with st.container(): # API GOOGLE DRIVE
-        FOLDER_ID = "1d0KqEyocTO1lbnWS1u7hooSVJgv5Fz6Q"  # ID da pasta no Google Drive
-        service = authenticate_service_account() 
-        df = read_parquet_files_from_drive(service, FOLDER_ID)
 
-        if df.empty:
-            st.error("Nenhum arquivo .parquet encontrado na pasta do Google Drive.")
-            st.stop()
-        else:
-            pass
+        @st.cache_data
+        def load_data(folder_id):
+            service = authenticate_service_account() 
+            df = read_parquet_files_from_drive(service, folder_id)
+            return df, service
+        
+        CONSOLIDADO.load_data = load_data # - tentativa de otimização
+
+        with st.container():  # API GOOGLE DRIVE
+            FOLDER_ID = "1d0KqEyocTO1lbnWS1u7hooSVJgv5Fz6Q"
+            df, service = load_data(FOLDER_ID)
+
+            if df.empty:
+                st.error("Nenhum arquivo .parquet encontrado na pasta do Google Drive.")
+                st.stop()
 
     with st.container():  # FILTROS ALUNO, DATA
 

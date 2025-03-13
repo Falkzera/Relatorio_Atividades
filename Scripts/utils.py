@@ -3,11 +3,14 @@ import smtplib
 import pandas as pd
 import streamlit as st
 import Scripts.utils as utils
-from Scripts.google_drive_utils import authenticate_service_account, download_file_by_name, read_parquet_files_from_drive
+from Scripts.google_drive_utils import authenticate_service_account, download_file_by_name, read_parquet_files_from_drive, baixar_cache_do_drive, baixar_parquet_do_drive
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
+
+from Modulos.DASHBOARDS import DASHBOARDS
+from Modulos.CONSOLIDADO import CONSOLIDADO
 
 def setup_page(page_name):
     """
@@ -184,12 +187,23 @@ def enviar_email(df_atividade, mes_escolhido, ano_escolhido, df_email="df_email"
     except Exception as e:
         st.error(f"❌ Erro ao enviar o e-mail, entre em contato com o Desenvolvedor. {e}")
 
+def load_data(folder_id):
+    service = authenticate_service_account() 
+    df = read_parquet_files_from_drive(service, folder_id)
+    return df, service
+
 def atualizar_dados():
     # Adiciona o botão de atualização manual no sidebar
     with st.sidebar:
         if st.button('Atualizar Informações', help='Força a atualização imediata dos dados', icon="🔄", use_container_width=True, type="secondary"):
             # Limpa o cache específico desta função
-            read_parquet_files_from_drive.clear()
+            baixar_parquet_do_drive.clear()
+            try:
+                DASHBOARDS.load_data.clear()
+                CONSOLIDADO.load_data.clear()
+            except:
+                st.sidebar.caption('Erro no log, contate o desenvolvedor. ( Não interfere no funcionamento do sistema )')
+
             st.rerun()
         
         # Mensagem de atualização automática

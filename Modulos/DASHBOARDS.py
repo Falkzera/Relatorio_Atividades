@@ -1,57 +1,89 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import Scripts.utils as utils
-import streamlit as st
 import plotly.graph_objects as go
+import Scripts.utils as utils
+import matplotlib.colors as mcolors
+import streamlit as st
+from plotly.subplots import make_subplots
 from Scripts.google_drive_utils import (authenticate_service_account, read_parquet_files_from_drive)
 
 def DASHBOARDS():
 
     with st.container(): # API GOOGLE DRIVE
-        FOLDER_ID = "1d0KqEyocTO1lbnWS1u7hooSVJgv5Fz6Q" 
-        service = authenticate_service_account() 
-        df = read_parquet_files_from_drive(service, FOLDER_ID)
 
-        if df.empty:
-            st.error("Nenhum arquivo .parquet encontrado na pasta do Google Drive.")
-            st.stop()
-        else:
-            pass
+        @st.cache_data
+        def load_data(folder_id):
+            service = authenticate_service_account() 
+            df = read_parquet_files_from_drive(service, folder_id)
+            return df, service
+        
+        DASHBOARDS.load_data = load_data
+
+        with st.container():  # API GOOGLE DRIVE
+            FOLDER_ID = "1d0KqEyocTO1lbnWS1u7hooSVJgv5Fz6Q"
+            df, service = load_data(FOLDER_ID)
+
+            if df.empty:
+                st.error("Nenhum arquivo .parquet encontrado na pasta do Google Drive.")
+                st.stop()
 
     with st.container(): # Filtro de Aluno, Mês e Ano
+
+        base_colors = ['#0b4754', '#54180b', '#9a6233', '#ffdd63']
+
+    
+
         col1, col2, col3 = st.columns(3)
 
-        with col1:
-            filtro_aluno = st.selectbox("Aluno", ["TODOS"] + sorted(df["ALUNO"].unique()), index=0)
-        with col2:
-            anos_disponiveis = df[df["ALUNO"] == filtro_aluno]["ANO"].unique() if filtro_aluno != "TODOS" else df["ANO"].unique()
-            filtro_ano = st.selectbox("Ano", ["TODOS"] + sorted(anos_disponiveis), index=0)
-        with col3:
-            if filtro_ano != "TODOS" and filtro_aluno != "TODOS":
-                meses_disponiveis = df[(df["ANO"] == filtro_ano) & (df["ALUNO"] == filtro_aluno)]["MES"].unique()
-            elif filtro_ano != "TODOS":
-                meses_disponiveis = df[df["ANO"] == filtro_ano]["MES"].unique()
-            elif filtro_aluno != "TODOS":
-                meses_disponiveis = df[df["ALUNO"] == filtro_aluno]["MES"].unique()
-            else:
-                meses_disponiveis = df["MES"].unique()
-            filtro_mes = st.selectbox("Mês", ["TODOS"] + sorted(meses_disponiveis), index=0)
+        # Seletor de Aluno
+        aluno_options = ["TODOS"] + sorted(df["ALUNO"].unique())
+        selected_alunos = col1.multiselect("Aluno", options=aluno_options, default=["TODOS"])
+        # Se "TODOS" estiver junto com outras opções, remove-o.
+        if "TODOS" in selected_alunos and len(selected_alunos) > 1:
+            selected_alunos = [aluno for aluno in selected_alunos if aluno != "TODOS"]
 
+        # Seletor de Ano
+        if "TODOS" not in selected_alunos:
+            anos_disponiveis = sorted(df[df["ALUNO"].isin(selected_alunos)]["ANO"].unique())
+        else:
+            anos_disponiveis = sorted(df["ANO"].unique())
+        ano_options = ["TODOS"] + anos_disponiveis
+        selected_anos = col2.multiselect("Ano", options=ano_options, default=["TODOS"])
+        if "TODOS" in selected_anos and len(selected_anos) > 1:
+            selected_anos = [ano for ano in selected_anos if ano != "TODOS"]
+
+        # Seletor de Mês
+        if "TODOS" not in selected_alunos and "TODOS" not in selected_anos:
+            meses_disponiveis = sorted(df[(df["ALUNO"].isin(selected_alunos)) & (df["ANO"].isin(selected_anos))]["MES"].unique())
+        elif "TODOS" not in selected_anos:
+            meses_disponiveis = sorted(df[df["ANO"].isin(selected_anos)]["MES"].unique())
+        elif "TODOS" not in selected_alunos:
+            meses_disponiveis = sorted(df[df["ALUNO"].isin(selected_alunos)]["MES"].unique())
+        else:
+            meses_disponiveis = sorted(df["MES"].unique())
+        mes_options = ["TODOS"] + meses_disponiveis
+        selected_meses = col3.multiselect("Mês", options=mes_options, default=["TODOS"])
+        if "TODOS" in selected_meses and len(selected_meses) > 1:
+            selected_meses = [mes for mes in selected_meses if mes != "TODOS"]
+
+        # Filtrando o DataFrame com base nas seleções
         df_filtrado = df.copy()
+        if "TODOS" not in selected_alunos:
+            df_filtrado = df_filtrado[df_filtrado["ALUNO"].isin(selected_alunos)]
+        if "TODOS" not in selected_anos:
+            df_filtrado = df_filtrado[df_filtrado["ANO"].isin(selected_anos)]
+        if "TODOS" not in selected_meses:
+            df_filtrado = df_filtrado[df_filtrado["MES"].isin(selected_meses)]
 
-        if filtro_aluno != "TODOS":
-            df_filtrado = df_filtrado[df_filtrado["ALUNO"] == filtro_aluno]
-        if filtro_mes != "TODOS":
-            df_filtrado = df_filtrado[df_filtrado["MES"] == filtro_mes]
-        if filtro_ano != "TODOS":
-            df_filtrado = df_filtrado[df_filtrado["ANO"] == filtro_ano]
+
+
+
 
         df_filtrado["DATA"] = pd.to_datetime(df_filtrado["ANO"].astype(str) + "-" + df_filtrado["MES"].astype(str) + "-01")
         df_filtrado = df_filtrado.sort_values("DATA")
-        df_filtrado_data = df_filtrado.groupby("DATA").sum().reset_index()
-
-
+        df_filtrado["ANO_MES"] = df_filtrado["DATA"].dt.strftime('%Y-%m')
+    
     with st.container(): # metrics
         st.write('---')
 
@@ -77,6 +109,10 @@ def DASHBOARDS():
         tab1, tab2 = st.tabs(["Horas Totais", "Horas por Atividade"])
 
         with tab1: # HORAS TOTAIS
+    
+            df_filtrado_data = df_filtrado.groupby("DATA").sum().reset_index()
+            st.caption("Clique em uma barra para ver detalhes das atividades do mês selecionado.")
+
             fig = go.Figure()
             fig.add_trace(go.Bar(x=df_filtrado_data["DATA"], y=df_filtrado_data["HORAS"], marker_color ='#0b4757', text=df_filtrado_data["HORAS"], textposition='inside', name=f'Horas'))
             fig.add_trace(go.Scatter(x=df_filtrado_data["DATA"], y=df_filtrado_data["HORAS"], name=''))
@@ -84,8 +120,57 @@ def DASHBOARDS():
             fig.update_layout(title=f' Quantidade de horas ao longo do tempo - (acumulado por atividades) - {total_hours} horas', title_font=dict(size=20), legend=dict(font=dict(size=15), orientation='h', x=0.5, xanchor='center', y=-0.3), xaxis=dict(tickfont=dict(size=15)), yaxis=dict(tickfont=dict(size=15)))
             fig.update_xaxes(dtick='M1', tickformat='%b %Y')
             fig.update_layout(autosize=False, width=1000, height=500)
-            st.plotly_chart(fig, use_container_width=True)
 
+            event_dict = st.plotly_chart(fig, use_container_width=True, on_select="rerun", theme="streamlit")
+
+            if event_dict and 'selection' in event_dict:
+                
+                selection = event_dict['selection']
+                if selection and 'points' in selection and len(selection['points']) > 0:
+                    with st.expander("📌Detalhes do mês selecionado", expanded=True):
+                        ponto_selecionado = selection['points'][0]
+
+                        mes_selecionado = pd.to_datetime(ponto_selecionado['x']).strftime('%Y-%m')
+                        st.info(f"📅 Périodo selecionado (**{mes_selecionado}**) em detalhes")
+
+                        df_detalhado = df_filtrado[df_filtrado["ANO_MES"] == mes_selecionado]
+
+                        atividades_mes = df_detalhado.groupby('ATIVIDADE', as_index=False)['HORAS'].sum()
+
+                        with st.container(): # Gráficos detalhados
+                                    
+                            num_atividades = len(atividades_mes['ATIVIDADE'])
+
+                            if num_atividades > len(base_colors):
+                                cmap = mcolors.LinearSegmentedColormap.from_list('custom_gradient', base_colors, N=num_atividades)
+                                cores = [mcolors.to_hex(cmap(i/(num_atividades-1))) for i in range(num_atividades)]
+                            else:
+                                cores = base_colors[:num_atividades]
+
+                            col1, col2 = st.columns(2)
+
+                            fig_expander = make_subplots(rows=1, cols=2, subplot_titles=(""), specs=[[{"type": "xy"}, {"type": "domain"}]])
+
+                            for i, row in atividades_mes.iterrows():
+                                fig_expander.add_trace(
+                                    go.Bar(x=[row['ATIVIDADE']], y=[row['HORAS']], marker_color=cores[i], name=row['ATIVIDADE'], text=row['HORAS'], showlegend=False),
+                                    row=1, col=1)
+
+                            fig_expander.add_trace(
+                                go.Pie(labels=atividades_mes['ATIVIDADE'], values=atividades_mes['HORAS'], hole=0.4, marker=dict(colors=cores), showlegend=True),
+                                row=1, col=2)
+                            
+                            fig_expander.update_xaxes(showticklabels=False, row=1, col=1)
+                        
+                            fig_expander.update_layout(
+                                title_text=f'Horas por atividade em {mes_selecionado}',
+                                legend=dict(font=dict(size=15), orientation='h', x=0.5, xanchor='center', y=-0.2),
+                                autosize=False, width=1800, height=500, margin=dict(l=50, r=50, t=50, b=50))
+
+                            st.plotly_chart(fig_expander, use_container_width=True)
+
+            else:
+                st.info("Selecione uma barra do gráfico acima para ver detalhes por atividade.")
 
         with tab2: # HORAS POR ATIVIDADES
 
@@ -197,7 +282,88 @@ def DASHBOARDS():
             total_hours = df_aluno_agg["HORAS"].sum()
             fig.update_layout(title=f'Quantidade de horas por aluno', title_font=dict(size=20), xaxis=dict(title=None, tickfont=dict(size=15)), yaxis=dict(title=None, tickfont=dict(size=15)))
             fig.update_layout(autosize=False, width=1000, height=500)
-            st.plotly_chart(fig, use_container_width=True)
+            # st.plotly_chart(fig, use_container_width=True)
+            event_dict = st.plotly_chart(fig, use_container_width=True, on_select="rerun", theme="streamlit")
+
+            if event_dict and 'selection' in event_dict:
+                
+                selection = event_dict['selection']
+                if selection and 'points' in selection and len(selection['points']) > 0:
+                    with st.expander("📌 Detalhes do aluno selecionado", expanded=True):
+                        ponto_selecionado = selection['points'][0]
+                        aluno_selecionado = ponto_selecionado['x']
+                        st.info(f"📅 Aluno selecionado (**{aluno_selecionado}**) em detalhes")
+
+                        df_detalhado = df_filtrado[df_filtrado["ALUNO"] == aluno_selecionado]
+
+                        df_aluno_selecionado = df_detalhado.groupby('ATIVIDADE', as_index=False)['HORAS'].sum()
+
+                        with st.container(): # Gráficos detalhados
+                                    
+                            num_atividades = len(df_aluno_selecionado['ATIVIDADE'])
+
+                            if num_atividades > len(base_colors):
+                                cmap = mcolors.LinearSegmentedColormap.from_list('custom_gradient', base_colors, N=num_atividades)
+                                cores = [mcolors.to_hex(cmap(i/(num_atividades-1))) for i in range(num_atividades)]
+                            else:
+                                cores = base_colors[:num_atividades]
+
+                            col1, col2 = st.columns(2)
+
+                            fig_expander = make_subplots(rows=1, cols=2, subplot_titles=(""), specs=[[{"type": "xy"}, {"type": "domain"}]])
+
+                            for i, row in df_aluno_selecionado.iterrows():
+                                fig_expander.add_trace(
+                                    go.Bar(x=[row['ATIVIDADE']], y=[row['HORAS']], marker_color=cores[i], name=row['ATIVIDADE'], text=row['HORAS'], showlegend=False),
+                                    row=1, col=1)
+
+                            fig_expander.add_trace(
+                                go.Pie(labels=df_aluno_selecionado['ATIVIDADE'], values=df_aluno_selecionado['HORAS'], hole=0.4, marker=dict(colors=cores), showlegend=True),
+                                row=1, col=2)
+                            
+                            fig_expander.update_xaxes(showticklabels=False, row=1, col=1)
+                        
+                            fig_expander.update_layout(
+                                title_text=f'Distribuição de: {aluno_selecionado}',
+                                legend=dict(font=dict(size=15), orientation='h', x=0.5, xanchor='center', y=-0.2),
+                                autosize=False, width=1800, height=500, margin=dict(l=50, r=50, t=50, b=50))
+
+                            st.plotly_chart(fig_expander, use_container_width=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         with tab2:
 

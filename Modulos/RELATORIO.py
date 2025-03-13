@@ -134,7 +134,7 @@ def RELATORIO():
                 if st.sidebar.button('Enviar', help='Clique para enviar o relatório', icon='📨', use_container_width=True, type='primary'):
 
                     service = authenticate_service_account()
-                    aluno_folder_id = create_folder_in_drive(service, aluno,FOLDER_ID)
+                    aluno_folder_id = create_folder_in_drive(service, aluno, FOLDER_ID)
                     local_path = f'{aluno}_{selecione_mes}_{ano}.parquet'
                     relatorio_pronto.to_parquet(local_path, index=False)
                     file_id = upload_file_to_drive(service, local_path, os.path.basename(local_path), aluno_folder_id)

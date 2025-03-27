@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import sys
 import re
+from streamlit_tags import st_tags
 
 def BUSCADOR():
     # === Configuração de caminhos ===
@@ -37,14 +38,16 @@ def BUSCADOR():
 
     # === Inputs de busca
     st.subheader('🔍 Busca nas Atas')
-    col1, col2 = st.columns(2)
-    with col1:
-        palavra_chave_1 = st.text_input("🔡 Palavra-chave 1 (ex: nivelamento)").strip().lower()
-    with col2:
-        palavra_chave_2 = st.text_input("🔡 Palavra-chave 2 (opcional)").strip().lower()
+    
+    palavras_chave = st_tags(
+        label="🔡 Palavras-chave (ex: nivelamento)",
+        text="Pressione Enter para adicionar uma palavra-chave",
+        value=[],  # valor padrão vazio
+        key="palavras_chave"
+    )
     busca_semantica = st.text_input("🧠 Busca semântica (ex: qual o dia?)").strip().lower()
 
-    palavras_chave = [p for p in [palavra_chave_1, palavra_chave_2] if p]
+    palavras_chave = [p for p in palavras_chave if p]
 
     # === Filtros
     with st.expander("🧰 Filtros"):

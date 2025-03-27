@@ -128,7 +128,7 @@ def indexar_atas_do_drive():
 
 # === BUSCA: carregar Chroma da memória sem erro ===
 
-@st.cache_resource(show_spinner="📦 Carregando cache vetorial do Drive...")
+@st.cache_resource()
 def carregar_chroma_memoria_do_cache():
     st.sidebar.info("📦 Carregando cache vetorial do Drive...")
 

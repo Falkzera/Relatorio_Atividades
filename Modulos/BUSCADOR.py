@@ -33,6 +33,7 @@ def BUSCADOR():
         st.markdown("- **Busca semântica**: busca inteligente com base no contexto.")
         st.markdown("- **Modo de busca**: escolha se quer buscar por contexto ou por exatidão.")
         st.markdown("- **Filtros**: refine por intervalo de anos.")
+        st.write('---')
         st.info(
         "Explicação dos componentes da busca:\n\n"
         "**Palavras-chave:**\n"
@@ -53,6 +54,8 @@ def BUSCADOR():
         "Esses componentes trabalham juntos para oferecer uma busca robusta e flexível: você pode optar por uma busca exata "
         "usando palavras-chave, ou por uma busca semântica para capturar a relevância contextual dos documentos, sempre com a "
         "possibilidade de filtrar os resultados por períodos de tempo."
+        "**Atenção:**\n"
+        "A busca semântica pode não ser tão objetiva em alguns casos, pois envolve cálculos de similaridade entre vetores de embeddings. "
     )
 
     

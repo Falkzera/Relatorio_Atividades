@@ -130,7 +130,7 @@ def indexar_atas_do_drive():
 
 @st.cache_resource()
 def carregar_chroma_memoria_do_cache():
-    st.sidebar.info("📦 Carregando cache vetorial do Drive...")
+    # st.sidebar.info("📦 Carregando cache vetorial do Drive...")
 
     service = authenticate_service_account()
     local_path = "/tmp/vetores_cache.pkl"

@@ -33,12 +33,34 @@ def BUSCADOR():
         st.markdown("- **Busca semântica**: busca inteligente com base no contexto.")
         st.markdown("- **Modo de busca**: escolha se quer buscar por contexto ou por exatidão.")
         st.markdown("- **Filtros**: refine por intervalo de anos.")
+        st.info(
+        "Explicação dos componentes da busca:\n\n"
+        "**Palavras-chave:**\n"
+        "Utilize o campo de palavras-chave para inserir termos específicos que serão usados para uma busca exata. "
+        "Esses termos, inseridos por meio do widget 'st_tags', permitem filtrar os documentos para que apenas aqueles que "
+        "contêm todas as palavras informadas (de forma literal) sejam retornados. Cada palavra é processada individualmente, "
+        "garantindo que espaços extras e diferenças de capitalização não afetem a busca.\n\n"
+        "**Busca semântica:**\n"
+        "Esse campo destina-se a uma consulta baseada no significado do conteúdo, e não na correspondência exata dos termos. "
+        "Ao preencher o campo de busca semântica, a consulta é enviada para um sistema de similaridade (por meio de embeddings), "
+        "que busca documentos contextualmente relevantes. Caso esse campo fique vazio, os termos das palavras-chave podem ser "
+        "concatenados para formar a consulta semântica.\n\n"
+        "**Filtros:**\n"
+        "Dentro do expander '🧰 Filtros', é possível ajustar o intervalo de anos para limitar os resultados da busca. "
+        "O sistema extrai os anos dos metadados dos documentos (utilizando uma expressão regular) e define os limites mínimo e máximo "
+        "disponíveis. O usuário pode, então, selecionar um intervalo de anos por meio de um slider, restringindo os resultados "
+        "a um período específico.\n\n"
+        "Esses componentes trabalham juntos para oferecer uma busca robusta e flexível: você pode optar por uma busca exata "
+        "usando palavras-chave, ou por uma busca semântica para capturar a relevância contextual dos documentos, sempre com a "
+        "possibilidade de filtrar os resultados por períodos de tempo."
+    )
+
     
     st.write('---')
 
     # === Inputs de busca
     st.subheader('🔍 Busca nas Atas')
-    
+
     palavras_chave = st_tags(
         label="🔡 Palavras-chave (ex: nivelamento)",
         text="Pressione Enter para adicionar uma palavra-chave",
@@ -53,7 +75,7 @@ def BUSCADOR():
     with st.expander("🧰 Filtros"):
         db_filtro = carregar_chroma_memoria_do_cache()
         total_atas = len(db_filtro._collection.get()["documents"]) if db_filtro else 0
-        st.write(f"📄 Total de atas disponíveis: **{total_atas}**")
+        st.write(f"📄 Filtre por datas, para reduzir o intervalo de busca.")
 
         anos_disponiveis = []
         if db_filtro:

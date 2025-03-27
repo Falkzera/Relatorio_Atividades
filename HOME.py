@@ -1,4 +1,7 @@
+__import__('pysqlite3')
+import sys
 import streamlit as st # type: ignore
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 st.set_page_config(layout='wide', page_title='Relatório de Atividades', page_icon='📊')
 

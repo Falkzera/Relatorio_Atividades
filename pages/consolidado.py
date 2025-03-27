@@ -22,6 +22,10 @@ if "dashboards" in st.session_state.tab_access:
     tabs.append("Dashboards 📊")
     tab_modules["Dashboards 📊"] = "Modulos.DASHBOARDS"
 
+if "buscador" in st.session_state.tab_access:
+    tabs.append("Buscador de Atas 🔍")
+    tab_modules["Buscador de Atas 🔍"] = "Modulos.BUSCADOR"
+
 # Inicializa o estado da aba selecionada se não existir
 if 'selected_tab' not in st.session_state:
     st.session_state.selected_tab = tabs[0] if tabs else None

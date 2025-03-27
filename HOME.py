@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st # type: ignore
 
 st.set_page_config(layout='wide', page_title='Relatório de Atividades', page_icon='📊')
 

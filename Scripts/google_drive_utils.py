@@ -248,3 +248,102 @@ def download_file_by_name(service, folder_id, file_name):
     # Fazer o download do arquivo
     file_data = download_file(service, file_id)
     return file_data
+
+
+
+import pickle
+import io
+from googleapiclient.http import MediaIoBaseUpload
+
+CACHE_FILENAME = "Cache_ATA.pkl"
+CACHE_FOLDER_ID = "1d0KqEyocTO1lbnWS1u7hooSVJgv5Fz6Q"
+
+def carregar_cache_docx_do_drive(service):
+    """Busca o cache .pkl no Drive pela pasta de cache e carrega como dicionário."""
+    query = f"name='{CACHE_FILENAME}' and '{CACHE_FOLDER_ID}' in parents and trashed=false"
+    results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
+    files = results.get('files', [])
+    if not files:
+        return {}, None  # Cache ainda não existe
+
+    file_id = files[0]['id']
+    request = service.files().get_media(fileId=file_id)
+    fh = io.BytesIO()
+    downloader = MediaIoBaseDownload(fh, request)
+
+    done = False
+    while not done:
+        _, done = downloader.next_chunk()
+    fh.seek(0)
+
+    cache = pickle.load(fh)
+    return cache, file_id
+
+
+def salvar_cache_docx_no_drive(service, cache_dict, file_id=None):
+    """Salva o dicionário atualizado como .pkl no Drive, dentro da pasta de cache."""
+    bio = io.BytesIO()
+    pickle.dump(cache_dict, bio)
+    bio.seek(0)
+
+    media = MediaIoBaseUpload(bio, mimetype="application/octet-stream", resumable=True)
+
+    if file_id:
+        service.files().update(fileId=file_id, media_body=media).execute()
+    else:
+        file_metadata = {
+            "name": CACHE_FILENAME,
+            "parents": [CACHE_FOLDER_ID]
+        }
+        service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+
+
+def enviar_arquivo_para_drive(service, caminho_local, nome_destino, pasta_id):
+    """
+    Envia um arquivo local para o Google Drive, substituindo se já existir na pasta.
+    """
+    from googleapiclient.http import MediaFileUpload
+
+    # Verifica se o arquivo com o mesmo nome já existe na pasta
+    query = f"'{pasta_id}' in parents and name = '{nome_destino}' and trashed = false"
+    response = service.files().list(q=query, fields="files(id, name)").execute()
+    arquivos_encontrados = response.get("files", [])
+
+    # Remove se já existe
+    for arq in arquivos_encontrados:
+        service.files().delete(fileId=arq['id']).execute()
+
+    # Faz upload
+    arquivo_metadata = {
+        'name': nome_destino,
+        'parents': [pasta_id]
+    }
+    media = MediaFileUpload(caminho_local, resumable=True)
+    service.files().create(body=arquivo_metadata, media_body=media, fields='id').execute()
+
+def baixar_arquivo_do_drive(service, nome_arquivo, destino_local, pasta_id):
+    """
+    Baixa um arquivo do Drive (procurando pelo nome) dentro de uma pasta específica.
+    """
+    from googleapiclient.http import MediaIoBaseDownload
+    import io
+
+    # Busca o arquivo pelo nome dentro da pasta
+    query = f"'{pasta_id}' in parents and name = '{nome_arquivo}' and trashed = false"
+    results = service.files().list(q=query, fields="files(id, name)").execute()
+    arquivos = results.get("files", [])
+
+    if not arquivos:
+        return False  # Arquivo não encontrado
+
+    file_id = arquivos[0]["id"]
+
+    request = service.files().get_media(fileId=file_id)
+    fh = io.FileIO(destino_local, 'wb')
+    downloader = MediaIoBaseDownload(fh, request)
+
+    done = False
+    while not done:
+        _, done = downloader.next_chunk()
+
+    return True

@@ -1,7 +1,9 @@
 import io
 import smtplib
-import pandas as pd
-import streamlit as st
+import re
+import os
+import pandas as pd # type: ignore
+import streamlit as st # type: ignore
 import Scripts.utils as utils
 from Scripts.google_drive_utils import authenticate_service_account, download_file_by_name, read_parquet_files_from_drive, baixar_cache_do_drive, baixar_parquet_do_drive
 from email.mime.multipart import MIMEMultipart
@@ -252,6 +254,8 @@ def display_links():
                     </div>
                     """
         st.markdown(links_html, unsafe_allow_html=True)
+        st.write('###')
+        st.markdown('<p style="text-align: center;">Desenvolvido por: <a href="https://github.com/falkzera" target="_blank">Lucas Falcão</a></p>', unsafe_allow_html=True)
 
 def display_header(title="Relatório de Atividades"):
     """Exibe o título da página com a imagem do PET ao lado."""
@@ -259,3 +263,235 @@ def display_header(title="Relatório de Atividades"):
         col1, col2 = st.columns([3, 1])
         col1.title(title)
         col2.image("Image/PET.png")
+
+
+
+
+
+
+def limpar_texto(texto: str) -> str:
+    """Remove quebras e espaços extras do texto."""
+    return ' '.join(texto.split())
+
+def contar_ocorrencias(texto: str, termo: str) -> int:
+    """Conta quantas vezes a palavra aparece no texto (ignora maiúsculas/minúsculas)."""
+    return len(re.findall(re.escape(termo), texto, re.IGNORECASE))
+
+def extrair_data(metadata: dict) -> str:
+    """Tenta extrair uma data no formato dd-mm-aaaa, incluindo separadores como '.', '-', '_', '/', ou espaços."""
+    filename = metadata.get("source", "")
+    match = re.search(r'(\d{2})[.\-_/ ](\d{2})[.\-_/ ](\d{4})', filename)
+    if match:
+        dia, mes, ano = match.groups()
+        return f"{ano}-{mes}-{dia}"  # formato ISO para fácil ordenação
+    return "0000-00-00"
+
+def filtrar_resultados_semanticos(resultados, palavras_chave):
+    """
+    Filtra os resultados que contêm TODAS as palavras-chave no texto
+    e estão dentro do intervalo de anos selecionado.
+    """
+    from Scripts.utils import limpar_texto, contar_ocorrencias, extrair_data
+    import streamlit as st
+
+    if isinstance(palavras_chave, str):
+        palavras_chave = [palavras_chave]
+
+    docs_filtrados = []
+    total_ocorrencias = 0
+
+    # Pega intervalo selecionado no filtro
+    ano_inicio = st.session_state.get("filtro_ano_inicio")
+    ano_fim = st.session_state.get("filtro_ano_fim")
+
+    for doc in resultados:
+        texto = limpar_texto(doc.page_content)
+        texto_lower = texto.lower()
+
+        # Aplica filtro de palavras-chave (todas devem estar presentes)
+        if not all(palavra.lower() in texto_lower for palavra in palavras_chave):
+            continue
+
+        data = extrair_data(doc.metadata)  # no formato YYYY-MM-DD
+        ano_doc = int(data[:4]) if data[:4].isdigit() else None
+
+        # Aplica filtro por ano (caso ano extraído seja válido)
+        if ano_doc is not None and ano_inicio and ano_fim:
+            if not (ano_inicio <= ano_doc <= ano_fim):
+                continue
+
+        ocorrencias_doc = sum(contar_ocorrencias(texto, palavra) for palavra in palavras_chave)
+        total_ocorrencias += ocorrencias_doc
+
+        docs_filtrados.append({
+            "doc": doc,
+            "texto": texto,
+            "ocorrencias": ocorrencias_doc,
+            "data": data
+        })
+
+    docs_filtrados.sort(key=lambda x: x["data"], reverse=True)
+    return docs_filtrados, total_ocorrencias
+
+
+def destacar_palavra(texto, palavras):
+    if isinstance(palavras, str):
+        palavras = [palavras]
+
+    for palavra in palavras:
+        if palavra:
+            # Regex para encontrar a palavra inteira, sem quebrar palavras maiores
+            pattern = re.compile(rf"\b({re.escape(palavra)})\b", flags=re.IGNORECASE)
+
+            # Substituição com preservação do original (case) e sem sobrescrever tags
+            texto = pattern.sub(r"<mark>\1</mark>", texto)
+    
+    return texto
+
+def formatar_data(data_iso):
+    """Converte AAAA-MM-DD para DD/MM/AAAA."""
+    try:
+        ano, mes, dia = data_iso.split("-")
+        return f"{dia}/{mes}/{ano}"
+    except:
+        return data_iso
+
+import re
+
+def extrair_frase_relevante(texto, palavras_chave):
+    import re
+
+    if isinstance(palavras_chave, str):
+        palavras_chave = [palavras_chave]
+
+    frases = re.split(r'(?<=[.!?])\s+', texto)
+    
+    for frase in frases:
+        for palavra in palavras_chave:
+            if palavra and palavra.lower() in frase.lower():
+                return frase.strip()
+
+    # Se nenhuma palavra for encontrada, retorna o início do texto como fallback
+    return frases[0].strip() if frases else texto[:300]
+
+def exibir_resultados_formatados(docs_filtrados, palavra_chave=None, limite=5):
+    import streamlit as st
+    import os
+
+    # Garante que as palavras-chave estejam em formato de lista
+    if isinstance(palavra_chave, str):
+        palavras_chave = [palavra_chave]
+    elif isinstance(palavra_chave, list):
+        palavras_chave = palavra_chave
+    else:
+        palavras_chave = []
+
+    st.markdown("<style>mark {background-color: #ffd54f; padding: 2px 4px; border-radius: 4px;}</style>", unsafe_allow_html=True)
+
+    total = len(docs_filtrados)
+    limite_atual = st.session_state.get("limite_resultados", limite)
+
+    for i, item in enumerate(docs_filtrados[:limite_atual], 1):
+        doc = item["doc"]
+        texto_completo = item["texto"]
+
+        # Trecho curto + destaque
+        texto_curto = extrair_frase_relevante(texto_completo, palavras_chave)
+        texto_formatado_curto = destacar_palavra(texto_curto, palavras_chave)
+        texto_formatado_completo = destacar_palavra(texto_completo, palavras_chave)
+
+        # Link direto para o Google Drive
+        id_drive = doc.metadata.get("id_drive")
+        link_drive = f"https://drive.google.com/file/d/{id_drive}/view" if id_drive else "#"
+
+
+
+        toggle_key = f"expandir_texto_{i}"
+        expandir = st.toggle(f"🔍 Ver mais do resultado {i}", key=toggle_key)
+
+        texto_formatado = texto_formatado_completo if expandir else texto_formatado_curto
+
+        # Caixa com borda + conteúdo formatado
+        st.markdown(f"""
+        <div style="border:1px solid #ddd; border-radius:10px; padding:15px; margin-bottom:20px;">
+            <h4>📄 Resultado {i}</h4>
+            <div><strong>🗓 Data:</strong> {formatar_data(item['data'])}</div>
+            <div><strong>📌 Fonte:</strong> `{os.path.basename(doc.metadata.get('source', 'Desconhecido'))}`</div>
+            <div><strong>🔁 Ocorrências:</strong> {item['ocorrencias']}</div>
+            <div><strong>🔗 Acesso completo:</strong> <a href="{link_drive}" target="_blank">Abrir no Google Drive</a></div>
+            <p style='text-align: justify;'>[...] {texto_formatado} [...]</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Botão para mostrar mais resultados
+    if limite_atual < total:
+        if st.button("🔁 Mostrar mais resultados", use_container_width=True, type="primary"):
+            st.session_state.limite_resultados = limite_atual + limite
+            st.rerun()
+
+
+
+import os
+import math
+
+def format_time(horas):
+    """
+    Converte um valor em horas para uma string formatada considerando:
+    - 60 minutos = 1 hora
+    - 24 horas = 1 dia
+
+    Exemplo: 1.41 horas -> "1 Hora e 41 Minutos"
+    """
+    # Converte horas para total de minutos (arredondando)
+    total_minutos = round(horas * 60)
+    
+    # Calcula dias, horas e minutos
+    dias = total_minutos // (24 * 60)
+    restante = total_minutos % (24 * 60)
+    hrs = restante // 60
+    minutos = restante % 60
+
+    partes = []
+    if dias > 0:
+        partes.append(f"{dias} Dia{'s' if dias != 1 else ''}")
+    if hrs > 0:
+        partes.append(f"{hrs} Hora{'s' if hrs != 1 else ''}")
+    # Se minutos for zero e já houver outros componentes, não é necessário exibi-los
+    if minutos > 0 or not partes:
+        partes.append(f"{minutos} Minuto{'s' if minutos != 1 else ''}")
+    
+    return " e ".join(partes)
+
+
+
+# Função para converter um valor em horas para um formato legível,
+# considerando as seguintes conversões:
+# 60 min = 1 hora, 24 h = 1 dia, 7 dias = 1 mês, 12 meses = 1 ano.
+def format_time_extended(horas):
+    # Converte horas para total de minutos (arredondando)
+    total_minutos = round(horas * 60)
+    # Calcula horas e minutos
+    hrs = total_minutos // 60
+    minutos = total_minutos % 60
+    # Converte horas para dias e horas restantes
+    dias = hrs // 24
+    horas_restantes = hrs % 24
+    # Converte dias para meses e dias restantes (7 dias = 1 mês)
+    meses = dias // 7
+    dias_restantes = dias % 7
+    # Converte meses para anos e meses restantes (12 meses = 1 ano)
+    anos = meses // 12
+    meses_restantes = meses % 12
+    
+    partes = []
+    if anos > 0:
+        partes.append(f"{anos} Ano{'s' if anos != 1 else ''}")
+    if meses_restantes > 0:
+        partes.append(f"{meses_restantes} Mês{'es' if meses_restantes != 1 else ''}")
+    if dias_restantes > 0:
+        partes.append(f"{dias_restantes} Dia{'s' if dias_restantes != 1 else ''}")
+    if horas_restantes > 0:
+        partes.append(f"{horas_restantes} Hora{'s' if horas_restantes != 1 else ''}")
+    if minutos > 0 or not partes:
+        partes.append(f"{minutos} Minuto{'s' if minutos != 1 else ''}")
+    return " e ".join(partes)

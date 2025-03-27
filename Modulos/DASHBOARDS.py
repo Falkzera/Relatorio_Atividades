@@ -30,6 +30,13 @@ def DASHBOARDS():
                 st.error("Nenhum arquivo .parquet encontrado na pasta do Google Drive.")
                 st.stop()
 
+    with st.container(): # Criação do Dataframe Entrada e Saída
+
+        df["DATA"] = pd.to_datetime(df["ANO"].astype(str) + "-" + df["MES"].astype(str).str.zfill(2) + "-01")
+        df_entrada_saida = df.groupby("ALUNO").agg(ENTRADA=("DATA", "min"), SAIDA=("DATA", "max")).reset_index()
+        df_entrada_saida["ENTRADA"] = df_entrada_saida["ENTRADA"].dt.strftime("%m/%Y")
+        df_entrada_saida["SAIDA"] = df_entrada_saida["SAIDA"].dt.strftime("%m/%Y")
+
     with st.container(): # Filtro de Aluno, Mês e Ano
 
         base_colors = ['#0b4754', '#54180b', '#9a6233', '#ffdd63']
@@ -75,15 +82,152 @@ def DASHBOARDS():
         df_filtrado["DATA"] = pd.to_datetime(df_filtrado["ANO"].astype(str) + "-" + df_filtrado["MES"].astype(str) + "-01")
         df_filtrado = df_filtrado.sort_values("DATA")
         df_filtrado["ANO_MES"] = df_filtrado["DATA"].dt.strftime('%Y-%m')
-    
-    with st.container(): # metrics
-        st.write('---')
 
-        col1, col2 = st.columns(2)
+    with st.container(): # Visualização do DataFrame
+
+        df_visualizacao = df_filtrado.copy()
+        df_visualizacao = df_visualizacao.sort_values(by=["ANO", "MES"])
+
+        st.write('---')
+        with st.expander('BASE DE DADOS 🎲', expanded=True):
+            tabs1, tabs2, tabs3, tabs4 = st.tabs(['Base-Bruta', 'Base-Horas', 'Base-Atividades', 'Entrada-Saída'])
+            with tabs1:
+                st.data_editor(df_visualizacao, hide_index=True)
+            with tabs2:
+
+                df['ANOMES'] = df['ANO'].astype(str) + '-' + df['MES'].astype(str)
+
+
+                # Agrupa por ALUNO e agrega:
+                # - A soma total das HORAS
+                # - A contagem de meses únicos (considerando ANO e MES) usando a coluna ANOMES
+                df_agrupado_visualizacao = df.groupby('ALUNO', as_index=False).agg(
+                    HORAS=('HORAS', 'sum'),
+                    MESES=('ANOMES', lambda x: len(x.unique()))
+                )
+                
+                # Ordena em ordem decrescente de HORAS
+                df_agrupado_visualizacao.sort_values('HORAS', inplace=True, ascending=False)
+                
+                # Calcula o Coeficiente Diário (CHD):
+                # Divide as HORAS totais pelo produto de MESES únicos e 30 dias
+                df_agrupado_visualizacao['CHD - (Coeficiente da Hora Diária)'] = (
+                    df_agrupado_visualizacao['HORAS'] / (df_agrupado_visualizacao['MESES'] * 30)
+                )
+
+                # Calcula o "Tempo de Vida" para cada aluno convertendo o total de HORAS com a função acima
+                df_agrupado_visualizacao['Tempo de Vida'] = df_agrupado_visualizacao['HORAS'].apply(utils.format_time_extended)
+                
+                # Exibe os dados agrupados
+                st.data_editor(df_agrupado_visualizacao, hide_index=True)
+                
+                # Explicação detalhada
+                st.info(
+                    'O cálculo do CHD (Coeficiente da Hora Diária) é realizado da seguinte forma: '
+                    'primeiro, somamos as horas dedicadas às atividades para cada aluno; '
+                    'depois, contamos quantos meses únicos foram registrados, considerando a combinação de ANO e MES. '
+                    'Em seguida, multiplicamos o número de meses únicos por 30 (dias por mês) para obter o total de dias '
+                    'do período considerado e dividimos o total de horas por esse número. '
+                    'Isso fornece a média de horas dedicadas por dia para cada aluno.'
+                )
+
+                st.info(
+                    "O 'Tempo de Vida' representa a conversão do total de horas dedicadas (coluna HORAS) em um formato legível, "
+                    "utilizando as seguintes conversões: 60 minutos = 1 hora, 24 horas = 1 dia, 7 dias = 1 mês e 12 meses = 1 ano. "
+                    "Dessa forma, o tempo total em horas é convertido para informar quantos anos, meses, dias, horas e minutos "
+                    "equivalem ao tempo investido pelo aluno nas atividades."
+                )
+                        
+
+            with tabs3:
+
+                df['ANOMES'] = df['ANO'].astype(str) + '-' + df['MES'].astype(str)
+
+
+                # Agrupa por ALUNO e agrega:
+                # - A soma total das HORAS
+                # - A contagem de meses únicos (considerando ANO e MES) usando a coluna ANOMES
+                df_agrupado_visualizacao = df.groupby('ATIVIDADE', as_index=False).agg(
+                    HORAS=('HORAS', 'sum'),
+                    MESES=('ANOMES', lambda x: len(x.unique()))
+                )
+                
+                # Ordena em ordem decrescente de HORAS
+                df_agrupado_visualizacao.sort_values('HORAS', inplace=True, ascending=False)
+                
+                # Calcula o Coeficiente Diário (CHD):
+                # Divide as HORAS totais pelo produto de MESES únicos e 30 dias
+                df_agrupado_visualizacao['CHD - (Coeficiente da Hora Diária)'] = (
+                    df_agrupado_visualizacao['HORAS'] / (df_agrupado_visualizacao['MESES'] * 30)
+                )
+
+                # Calcula o "Tempo de Vida" para cada aluno convertendo o total de HORAS com a função acima
+                df_agrupado_visualizacao['Tempo de Vida'] = df_agrupado_visualizacao['HORAS'].apply(utils.format_time_extended)
+                
+                # Exibe os dados agrupados
+                st.data_editor(df_agrupado_visualizacao, hide_index=True)
+                
+                # Explicação detalhada
+                st.info(
+                    'O cálculo do CHD (Coeficiente da Hora Diária) é realizado da seguinte forma: '
+                    'primeiro, somamos as horas dedicadas às atividades para cada aluno; '
+                    'depois, contamos quantos meses únicos foram registrados, considerando a combinação de ANO e MES. '
+                    'Em seguida, multiplicamos o número de meses únicos por 30 (dias por mês) para obter o total de dias '
+                    'do período considerado e dividimos o total de horas por esse número. '
+                    'Isso fornece a média de horas dedicadas por dia para cada aluno.'
+                )
+
+                st.info(
+                    "O 'Tempo de Vida' representa a conversão do total de horas dedicadas (coluna HORAS) em um formato legível, "
+                    "utilizando as seguintes conversões: 60 minutos = 1 hora, 24 horas = 1 dia, 7 dias = 1 mês e 12 meses = 1 ano. "
+                    "Dessa forma, o tempo total em horas é convertido para informar quantos anos, meses, dias, horas e minutos "
+                    "equivalem ao tempo investido pelo aluno nas atividades."
+                )
+
+            with tabs4:
+                st.dataframe(df_entrada_saida, hide_index=True)
+        st.write('---')
+        
+    with st.container(): # metrics
+
+        num_meses = df_filtrado[['ANO', 'MES']].drop_duplicates().shape[0]
+        num_alunos = len(df_filtrado['ALUNO'].unique())
+        total_horas = df_filtrado['HORAS'].sum()
+        carga_media_diaria = total_horas / (num_meses * 30) / num_alunos
+        carga_media_semanal = total_horas / ((num_meses * 30) / 7) / num_alunos
+        carga_media_mensal = total_horas / num_meses / num_alunos
+
+        valor_diario = utils.format_time(carga_media_diaria)
+        valor_semanal = utils.format_time(carga_media_semanal)
+        valor_mensal = utils.format_time(carga_media_mensal)
+
+        st.subheader("Contador de horas")
+        col0, col1, col2 = st.columns(3)
+        # Exibe os resultados em três colunas (col0, col1 e col2)
+        with col0:
+            st.metric(label="Carga Horária Média Por Dia", value=valor_diario, border=True)
+
+        with col1:
+            st.metric(label="Carga Horária Média Por Semana", value=valor_semanal, border=True)
+
+        with col2:
+            st.metric(label="Carga Horária Média Por Mês", value=valor_mensal, border=True)
+
+
+        ############
+
+        st.subheader("Demais metrícas")
+        col0, col1, col2 = st.columns(3)
+        with col0:
+            num_meses = df_filtrado[['ANO', 'MES']].drop_duplicates().shape[0]
+            carga_media = df_filtrado['HORAS'].sum() / (num_meses * 30)
+            carga_media_final = carga_media / len(df_filtrado['ALUNO'].unique())
+            st.metric(label="Carga Horária Média Por Dia (Coeficiente)", value=f'{carga_media_final:.2f}', border=True)
         with col1:
             st.metric(label="Total de atividades realizadas", value=len(df_filtrado), border=True)
         with col2:
-            st.metric(label="Total de horas realizadas", value=df_filtrado['HORAS'].sum(), border=True)
+            st.metric(label="Carga Horária Total", value=df_filtrado['HORAS'].sum(), border=True)
+
 
         top_atividades = (df_filtrado.groupby("ATIVIDADE")["HORAS"].sum().reset_index().sort_values("HORAS", ascending=False).head(3))
 
@@ -334,8 +478,6 @@ def DASHBOARDS():
 
             st.plotly_chart(fig, use_container_width=True)
 
-
-
     with st.container(): # Gráfico de dispersão 
             
             st.write('---')
@@ -358,7 +500,6 @@ def DASHBOARDS():
 
                 st.plotly_chart(fig, theme="streamlit", use_container_width=True)
 
-
             with tabs2:
                 df_usado = df_aluno_agg
 
@@ -374,7 +515,5 @@ def DASHBOARDS():
                 )
 
                 st.plotly_chart(fig, theme="streamlit", use_container_width=True)
-
-
 
     utils.atualizar_dados()

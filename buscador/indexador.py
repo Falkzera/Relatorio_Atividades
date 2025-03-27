@@ -81,6 +81,7 @@ def coletar_arquivos_docx_do_drive():
 
                     cache_docx[arq_id] = doc_info
                     novos_docs.append(doc_info)
+                    print(f"✅ Arquivo **{nome}** (ID: {arq_id}) baixado e adicionado ao cache.")
 
     salvar_cache_docx_no_drive(service, cache_docx, cache_file_id)
     st.success(f"✅ Total de documentos carregados: {len(novos_docs)}")

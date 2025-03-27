@@ -267,6 +267,7 @@ def carregar_cache_docx_do_drive(service):
         return {}, None  # Cache ainda não existe
 
     file_id = files[0]['id']
+    print(f"🔍 Cache encontrado! ID do cache: {file_id}")
     request = service.files().get_media(fileId=file_id)
     fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, request)
@@ -277,6 +278,7 @@ def carregar_cache_docx_do_drive(service):
     fh.seek(0)
 
     cache = pickle.load(fh)
+    print(f"✅ Cache carregado com sucesso. Total de entradas: {len(cache)}")
     return cache, file_id
 
 

@@ -37,7 +37,7 @@ def BUSCADOR():
         "Explicação dos componentes da busca:\n\n"
         "**Palavras-chave:**\n"
         "Utilize o campo de palavras-chave para inserir termos específicos que serão usados para uma busca exata. "
-        "Esses termos, inseridos por meio do widget 'st_tags', permitem filtrar os documentos para que apenas aqueles que "
+        "Esses termos, permitem filtrar os documentos para que apenas aqueles que "
         "contêm todas as palavras informadas (de forma literal) sejam retornados. Cada palavra é processada individualmente, "
         "garantindo que espaços extras e diferenças de capitalização não afetem a busca.\n\n"
         "**Busca semântica:**\n"

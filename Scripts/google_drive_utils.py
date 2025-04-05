@@ -168,6 +168,65 @@ def baixar_parquet_do_drive(_service, file_id):
     file_data.seek(0)
     return pd.read_parquet(file_data)
 
+
+# def read_parquet_files_from_drive(_service, folder_id='1d0KqEyocTO1lbnWS1u7hooSVJgv5Fz6Q'):
+#     # Baixa o cache persistente do Google Drive
+#     cache_local, cache_file_id = baixar_cache_do_drive(_service)
+#     if cache_local is None:
+#         cache_local = {}
+
+#     parquet_files = get_all_parquet_files(_service, folder_id)
+
+#     arquivos_no_drive = {file['id']: file['name'] for file in parquet_files}
+#     nomes_no_drive = set(arquivos_no_drive.values())
+
+#     # Remover arquivos do cache que não existem mais no drive ou possuem nome duplicado
+#     ids_para_remover = []
+#     for cached_id, cached_df in cache_local.items():
+#         cached_nome = next((file['name'] for file in parquet_files if file['id'] == cached_id), None)
+#         if cached_nome is None or cached_nome not in nomes_no_drive:
+#             ids_para_remover.append(cached_id)
+
+#     for id_antigo in ids_para_remover:
+#         del cache_local[id_antigo]
+
+#     # Identificar novos arquivos por ID
+#     novos_arquivos = [f for f in parquet_files if f['id'] not in cache_local]
+
+#     total_novos = len(novos_arquivos)
+#     progress_bar = st.progress(0)
+
+#     if total_novos > 0:
+#         st.sidebar.caption(f"Carregando {total_novos} novos arquivos do Drive...")
+#         for idx, file in enumerate(novos_arquivos):
+#             # Remover arquivo antigo (nome duplicado) do cache, se existir
+#             ids_com_mesmo_nome = [id_ for id_, nome in arquivos_no_drive.items()
+#                                   if nome == file['name'] and id_ in cache_local]
+#             for id_dup in ids_com_mesmo_nome:
+#                 del cache_local[id_dup]
+
+#             # Adicionar novo arquivo ao cache
+#             df_novo = baixar_parquet_do_drive(_service, file['id'])
+#             cache_local[file['id']] = df_novo
+#             progress_bar.progress((idx + 1) / total_novos)
+#     else:
+#         st.sidebar.caption("Nenhum arquivo novo encontrado. Usando cache persistente.")
+
+#     # Salva o cache atualizado no Drive
+#     salvar_cache_no_drive(_service, cache_local, cache_file_id)
+
+#     # Junta todos os arquivos carregados
+#     df_completo = pd.concat(cache_local.values(), ignore_index=True)
+
+#     st.session_state.last_updated = pd.Timestamp.now(tz='America/Sao_Paulo').strftime('%d/%m/%Y %H:%M:%S')
+
+#     return df_completo
+
+def get_modified_time(service, file_id):
+    file = service.files().get(fileId=file_id, fields="modifiedTime").execute()
+    return file['modifiedTime']
+
+@st.cache_data(ttl=3600)
 def read_parquet_files_from_drive(_service, folder_id='1d0KqEyocTO1lbnWS1u7hooSVJgv5Fz6Q'):
     # Baixa o cache persistente do Google Drive
     cache_local, cache_file_id = baixar_cache_do_drive(_service)
@@ -175,13 +234,12 @@ def read_parquet_files_from_drive(_service, folder_id='1d0KqEyocTO1lbnWS1u7hooSV
         cache_local = {}
 
     parquet_files = get_all_parquet_files(_service, folder_id)
-
     arquivos_no_drive = {file['id']: file['name'] for file in parquet_files}
     nomes_no_drive = set(arquivos_no_drive.values())
 
     # Remover arquivos do cache que não existem mais no drive ou possuem nome duplicado
     ids_para_remover = []
-    for cached_id, cached_df in cache_local.items():
+    for cached_id, cached_data in cache_local.items():
         cached_nome = next((file['name'] for file in parquet_files if file['id'] == cached_id), None)
         if cached_nome is None or cached_nome not in nomes_no_drive:
             ids_para_remover.append(cached_id)
@@ -189,37 +247,54 @@ def read_parquet_files_from_drive(_service, folder_id='1d0KqEyocTO1lbnWS1u7hooSV
     for id_antigo in ids_para_remover:
         del cache_local[id_antigo]
 
-    # Identificar novos arquivos por ID
-    novos_arquivos = [f for f in parquet_files if f['id'] not in cache_local]
+    # Identificar novos arquivos ou arquivos modificados
+    novos_arquivos = []
+    for file in parquet_files:
+        file_id = file['id']
+        modified_time = get_modified_time(_service, file_id)
+
+        if (
+            file_id not in cache_local or
+            cache_local[file_id].get("modifiedTime") != modified_time
+        ):
+            novos_arquivos.append((file, modified_time))
 
     total_novos = len(novos_arquivos)
     progress_bar = st.progress(0)
 
     if total_novos > 0:
-        st.sidebar.caption(f"Carregando {total_novos} novos arquivos do Drive...")
-        for idx, file in enumerate(novos_arquivos):
-            # Remover arquivo antigo (nome duplicado) do cache, se existir
-            ids_com_mesmo_nome = [id_ for id_, nome in arquivos_no_drive.items()
-                                  if nome == file['name'] and id_ in cache_local]
-            for id_dup in ids_com_mesmo_nome:
+        st.sidebar.caption(f"Carregando {total_novos} arquivos atualizados do Drive...")
+        for idx, (file, modified_time) in enumerate(novos_arquivos):
+            file_id = file['id']
+            file_name = file['name']
+
+            # Remove duplicado pelo nome
+            ids_mesmo_nome = [id_ for id_, meta in cache_local.items()
+                              if isinstance(meta, dict) and meta.get("df") is not None and arquivos_no_drive.get(id_) == file_name]
+            for id_dup in ids_mesmo_nome:
                 del cache_local[id_dup]
 
-            # Adicionar novo arquivo ao cache
-            df_novo = baixar_parquet_do_drive(_service, file['id'])
-            cache_local[file['id']] = df_novo
+            df_novo = baixar_parquet_do_drive(_service, file_id)
+            cache_local[file_id] = {
+                "df": df_novo,
+                "modifiedTime": modified_time
+            }
             progress_bar.progress((idx + 1) / total_novos)
     else:
-        st.sidebar.caption("Nenhum arquivo novo encontrado. Usando cache persistente.")
+        st.sidebar.caption("Nenhum arquivo novo ou atualizado encontrado. Usando cache persistente.")
 
-    # Salva o cache atualizado no Drive
     salvar_cache_no_drive(_service, cache_local, cache_file_id)
 
-    # Junta todos os arquivos carregados
-    df_completo = pd.concat(cache_local.values(), ignore_index=True)
+    df_completo = pd.concat(
+        [info["df"] for info in cache_local.values() if isinstance(info, dict)],
+        ignore_index=True
+    )
 
     st.session_state.last_updated = pd.Timestamp.now(tz='America/Sao_Paulo').strftime('%d/%m/%Y %H:%M:%S')
 
     return df_completo
+
+
 
 def download_file_by_name(service, folder_id, file_name):
     """
@@ -349,3 +424,39 @@ def baixar_arquivo_do_drive(service, nome_arquivo, destino_local, pasta_id):
         _, done = downloader.next_chunk()
 
     return True
+
+
+from googleapiclient.http import MediaFileUpload
+
+def upload_ou_atualiza_file(service, file_path, file_name, folder_id):
+    """
+    Faz upload de um novo arquivo ou atualiza um existente (com mesmo nome) na mesma pasta do Google Drive.
+    Retorna o ID do arquivo final.
+    """
+    # Verifica se o arquivo com esse nome já existe na pasta
+    query = f"'{folder_id}' in parents and name = '{file_name}' and trashed = false"
+    response = service.files().list(q=query, fields="files(id)").execute()
+    files = response.get('files', [])
+
+    media = MediaFileUpload(file_path, resumable=True)
+
+    if files:
+        file_id = files[0]['id']
+        updated_file = service.files().update(
+            fileId=file_id,
+            media_body=media
+        ).execute()
+        print(f"✅ Arquivo atualizado: {file_name} (ID: {file_id})")
+        return updated_file['id']
+    else:
+        file_metadata = {
+            'name': file_name,
+            'parents': [folder_id]
+        }
+        uploaded_file = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id'
+        ).execute()
+        print(f"✅ Arquivo criado: {file_name} (ID: {uploaded_file['id']})")
+        return uploaded_file['id']

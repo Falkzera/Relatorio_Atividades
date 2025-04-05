@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 import Scripts.utils as utils
 from datetime import datetime
-from Scripts.google_drive_utils import authenticate_service_account, create_folder_in_drive, upload_file_to_drive,  remove_duplicate_files_in_subfolders
+from Scripts.google_drive_utils import authenticate_service_account, create_folder_in_drive, upload_ou_atualiza_file
 
 def RELATORIO():
 
@@ -135,9 +135,10 @@ def RELATORIO():
                     aluno_folder_id = create_folder_in_drive(service, aluno, FOLDER_ID)
                     local_path = f'{aluno}_{selecione_mes}_{ano}.parquet'
                     relatorio_pronto.to_parquet(local_path, index=False)
-                    file_id = upload_file_to_drive(service, local_path, os.path.basename(local_path), aluno_folder_id)
+                    # file_id = upload_file_to_drive(service, local_path, os.path.basename(local_path), aluno_folder_id)
+                    file_id = upload_ou_atualiza_file(service, local_path, os.path.basename(local_path), aluno_folder_id)
                     os.remove(local_path)
-                    remove_duplicate_files_in_subfolders(service, aluno_folder_id)
+                    # remove_duplicate_files_in_subfolders(service, aluno_folder_id)
 
                     st.sidebar.success(f'Relatório enviado com sucesso! ID do arquivo: {file_id}')
                     st.balloons()
